@@ -15,16 +15,16 @@
  *
  * PIN		      | IN/OUT|Function
  * ----------------------------------------------------------
- * PB5  (ADC_AIN5)    | in  | phase_B_current
- * PB6  (ADC_AIN6)    | in  | motor_total_current
- * PE7  (ADC_AIN8)    | in  | motor_total_current_filtered
- * PD7                | in  | motor_total_over_current
+// * PB5  (ADC_AIN5)    | in  | phase_B_current
+// * PB6  (ADC_AIN6)    | in  | motor_total_current
+// * PE7  (ADC_AIN8)    | in  | motor_total_current_filtered
+// * PD7                | in  | motor_total_over_current
+// *
+// * PE6  (ADC_AIN9)    | in  | battery_voltage
  *
- * PE6  (ADC_AIN9)    | in  | battery_voltage
- *
- * PE0                | in  | Hall_sensor_A
- * PE1                | in  | Hall_sensor_B
- * PE2                | in  | Hall_sensor_C
+ * PE5                | in  | Hall_sensor_A
+ * PD2                | in  | Hall_sensor_B
+ * PC5                | in  | Hall_sensor_C
  *
  * PB2  (TIM1_CH3N)   | out | PWM_phase_A_low
  * PB1  (TIM1_CH2N)   | out | PWM_phase_B_low
@@ -36,11 +36,11 @@
  * PD5  (UART2_TX)    | out | usart_tx
  * PD6  (UART2_RX)    | out | usart_rx
  *
- * PA4                | in  | brake
- * PB4  (ADC_AIN4)    | in  | throttle
- * PD0                | in  | PAS1
- * PB7                | in  | PAS2
- * PC5                | in  | wheel speed
+// * PA4                | in  | brake
+// * PB4  (ADC_AIN4)    | in  | throttle
+// * PD0                | in  | PAS1
+// * PB7                | in  | PAS2
+// * PC5                | in  | wheel speed
  *
  *
  */
@@ -51,25 +51,25 @@
 #include "main.h"
 #include "stm8s_gpio.h"
 
-#define PHASE_B_CURRENT__PIN			GPIO_PIN_5
-#define CURRENT_PHASE_B__PORT     		GPIOB
-#define MOTOR_CURRENT__PIN 			GPIO_PIN_6
-#define CURRENT_MOTOR_TOTAL__PORT 		GPIOB
-#define BATTERY_CURRENT__PIN 			GPIO_PIN_7
-#define CURRENT_MOTOR_TOTAL_FILTRED__PORT 	GPIOE
-#define CURRENT_MOTOR_TOTAL_OVER__PIN  		GPIO_PIN_7
-#define CURRENT_MOTOR_TOTAL_OVER__PORT 		GPIOD
+//#define PHASE_B_CURRENT__PIN			GPIO_PIN_5
+//#define CURRENT_PHASE_B__PORT     		GPIOB
+//#define MOTOR_CURRENT__PIN 			GPIO_PIN_6
+//#define CURRENT_MOTOR_TOTAL__PORT 		GPIOB
+//#define BATTERY_CURRENT__PIN 			GPIO_PIN_7
+//#define CURRENT_MOTOR_TOTAL_FILTRED__PORT 	GPIOE
+//#define CURRENT_MOTOR_TOTAL_OVER__PIN  		GPIO_PIN_7
+//#define CURRENT_MOTOR_TOTAL_OVER__PORT 		GPIOD
 
-#define BATTERY_VOLTAGE__PIN      GPIO_PIN_6
-#define BATTERY_VOLTAGE__PORT     GPIOE
+//#define BATTERY_VOLTAGE__PIN      GPIO_PIN_6
+//#define BATTERY_VOLTAGE__PORT     GPIOE
 
-#define HALL_SENSOR_A__PIN      GPIO_PIN_0
-#define HALL_SENSOR_B__PIN      GPIO_PIN_1
-#define HALL_SENSOR_C__PIN      GPIO_PIN_2
+#define HALL_SENSOR_A__PIN      GPIO_PIN_5
+#define HALL_SENSOR_B__PIN      GPIO_PIN_2
+#define HALL_SENSOR_C__PIN      GPIO_PIN_5
 
 #define HALL_SENSOR_A__PORT       GPIOE
-#define HALL_SENSOR_B__PORT       GPIOE
-#define HALL_SENSOR_C__PORT       GPIOE
+#define HALL_SENSOR_B__PORT       GPIOD
+#define HALL_SENSOR_C__PORT       GPIOC
 #define HALL_SENSORS__PORT        GPIOE
 #define HALL_SENSORS_MASK 	      (HALL_SENSOR_A__PIN | HALL_SENSOR_B__PIN | HALL_SENSOR_C__PIN)
 
@@ -91,23 +91,23 @@
 #define UART2_RX__PIN             GPIO_PIN_6
 #define UART2_RX__PORT            GPIOD
 
-#define BRAKE__PIN                GPIO_PIN_4
-#define BRAKE__PORT               GPIOA
-
-#define THROTTLE__PIN             GPIO_PIN_4
-#define THROTTLE__PORT            GPIOB
-
-#define PAS1__PIN                 GPIO_PIN_0
-#define PAS1__PORT                GPIOD
-
-#define PAS2__PIN                 GPIO_PIN_7
-#define PAS2__PORT                GPIOB
-
-#define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_5
-#define WHEEL_SPEED_SENSOR__PORT  GPIOC
-
-#define DEBUG__PIN                GPIO_PIN_2
-#define DEBUG__PORT               GPIOD
+//#define BRAKE__PIN                GPIO_PIN_4
+//#define BRAKE__PORT               GPIOA
+//
+//#define THROTTLE__PIN             GPIO_PIN_4
+//#define THROTTLE__PORT            GPIOB
+//
+//#define PAS1__PIN                 GPIO_PIN_0
+//#define PAS1__PORT                GPIOD
+//
+//#define PAS2__PIN                 GPIO_PIN_7
+//#define PAS2__PORT                GPIOB
+//
+//#define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_5
+//#define WHEEL_SPEED_SENSOR__PORT  GPIOC
+//
+//#define DEBUG__PIN                GPIO_PIN_2
+//#define DEBUG__PORT               GPIOD
 
 
 void gpio_init (void);

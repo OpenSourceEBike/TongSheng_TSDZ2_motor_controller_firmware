@@ -36,11 +36,11 @@
  * PD5  (UART2_TX)    | out | usart_tx
  * PD6  (UART2_RX)    | out | usart_rx
  *
-// * PA4                | in  | brake
+ * PC6                | in  | brake
 // * PB4  (ADC_AIN4)    | in  | throttle
-// * PD0                | in  | PAS1
-// * PB7                | in  | PAS2
-// * PC5                | in  | wheel speed
+ * PD7                | in  | PAS1 (yellow wire)
+ * PE0                | in  | PAS2 (blue wire)
+ * PA1                | in  | wheel speed
  *
  *
  */
@@ -64,14 +64,12 @@
 //#define BATTERY_VOLTAGE__PORT     GPIOE
 
 #define HALL_SENSOR_A__PIN      GPIO_PIN_5
-#define HALL_SENSOR_B__PIN      GPIO_PIN_2
-#define HALL_SENSOR_C__PIN      GPIO_PIN_5
+#define HALL_SENSOR_B__PIN      GPIO_PIN_5
+#define HALL_SENSOR_C__PIN      GPIO_PIN_2
 
 #define HALL_SENSOR_A__PORT       GPIOE
-#define HALL_SENSOR_B__PORT       GPIOD
-#define HALL_SENSOR_C__PORT       GPIOC
-#define HALL_SENSORS__PORT        GPIOE
-#define HALL_SENSORS_MASK 	      (HALL_SENSOR_A__PIN | HALL_SENSOR_B__PIN | HALL_SENSOR_C__PIN)
+#define HALL_SENSOR_B__PORT       GPIOC
+#define HALL_SENSOR_C__PORT       GPIOD
 
 #define PMW_PHASE_A_LOW__PIN      GPIO_PIN_2
 #define PMW_PHASE_A_LOW__PORT     GPIOB
@@ -91,21 +89,21 @@
 #define UART2_RX__PIN             GPIO_PIN_6
 #define UART2_RX__PORT            GPIOD
 
-//#define BRAKE__PIN                GPIO_PIN_4
-//#define BRAKE__PORT               GPIOA
-//
+#define BRAKE__PIN                GPIO_PIN_6
+#define BRAKE__PORT               GPIOC
+
 //#define THROTTLE__PIN             GPIO_PIN_4
 //#define THROTTLE__PORT            GPIOB
-//
-//#define PAS1__PIN                 GPIO_PIN_0
-//#define PAS1__PORT                GPIOD
-//
-//#define PAS2__PIN                 GPIO_PIN_7
-//#define PAS2__PORT                GPIOB
-//
-//#define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_5
-//#define WHEEL_SPEED_SENSOR__PORT  GPIOC
-//
+
+#define PAS1__PIN                 GPIO_PIN_0
+#define PAS1__PORT                GPIOE
+
+#define PAS2__PIN                 GPIO_PIN_7
+#define PAS2__PORT                GPIOD
+
+#define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_1
+#define WHEEL_SPEED_SENSOR__PORT  GPIOA
+
 //#define DEBUG__PIN                GPIO_PIN_2
 //#define DEBUG__PORT               GPIOD
 

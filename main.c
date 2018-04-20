@@ -12,6 +12,11 @@
 #include "stm8s.h"
 #include "gpio.h"
 #include "uart.h"
+#include "pwm.h"
+#include "motor.h"
+#include "wheel_speed_sensor.h"
+#include "brake.h"
+#include "pas.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //// Functions prototypes
@@ -38,6 +43,9 @@ int main (void);
 
 // UART2 Receive interrupt
 void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER);
+// PWM cycle interrupt
+void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER);
+void EXTI_PORTA_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER);
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -53,15 +61,27 @@ void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
 
 int main (void)
 {
-  //set clock at the max 16MHz
-//  CLK_HSIPrescalerConfig (CLK_PRESCALER_HSIDIV1); // FAILS if enabled, system seems to block aftersome time
+  static uint32_t ui32_temp;
 
   gpio_init ();
+  brake_init ();
+  while (brake_is_set()) ; // hold here while brake is pressed -- this is a protection for development
+  pas1_init ();
+  pas2_init ();
+  wheel_speed_sensor_init ();
   uart_init ();
+  pwm_init ();
+  hall_sensor_init ();
+  motor_init ();
+  enableInterrupts ();
+  TIM1_SetCompare1 (511);
+  TIM1_SetCompare2 (511);
+  TIM1_SetCompare3 (511);
 
   while (1)
   {
-    printf ("Hello world -- Flexible OpenSource firmware for TongSheng TSDZ2 mid drive motor\n");
+//    printf ("%d - %d - %d - %d - %d\n", GPIOA->IDR, GPIOB->IDR, GPIOC->IDR, GPIOD->IDR, GPIOE->IDR);
+    printf ("%d - %d\n", GPIO_ReadInputPin(PAS1__PORT, PAS1__PIN), GPIO_ReadInputPin(PAS2__PORT, PAS2__PIN));
   }
 
   return 0;

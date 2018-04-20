@@ -17,6 +17,8 @@
 #include "wheel_speed_sensor.h"
 #include "brake.h"
 #include "pas.h"
+#include "adc.h"
+#include "timers.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //// Functions prototypes
@@ -73,15 +75,29 @@ int main (void)
   pwm_init ();
   hall_sensor_init ();
   motor_init ();
-  enableInterrupts ();
+  timer2_init ();
+//  enableInterrupts ();
   TIM1_SetCompare1 (511);
   TIM1_SetCompare2 (511);
   TIM1_SetCompare3 (511);
 
+  adc_init ();
+
   while (1)
   {
 //    printf ("%d - %d - %d - %d - %d\n", GPIOA->IDR, GPIOB->IDR, GPIOC->IDR, GPIOD->IDR, GPIOE->IDR);
-    printf ("%d - %d\n", GPIO_ReadInputPin(PAS1__PORT, PAS1__PIN), GPIO_ReadInputPin(PAS2__PORT, PAS2__PIN));
+//    printf ("%d - %d\n", GPIO_ReadInputPin(PAS1__PORT, PAS1__PIN), GPIO_ReadInputPin(PAS2__PORT, PAS2__PIN));
+
+    printf ("%d,%d,%d,%d,%d,%d\n",
+	    (uint16_t) ADC1_GetBufferValue(3) >> 2,
+	    (uint16_t) ADC1_GetBufferValue(4) >> 2,
+	    (uint16_t) ADC1_GetBufferValue(5) >> 2,
+	    (uint16_t) ADC1_GetBufferValue(6) >> 2,
+	    (uint16_t) ADC1_GetBufferValue(7) >> 2,
+	    (uint16_t) ADC1_GetBufferValue(9) >> 2);
+
+//      printf ("%d\n",
+//  	    (uint16_t) ADC1_GetBufferValue(4));
   }
 
   return 0;

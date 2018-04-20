@@ -1,0 +1,32 @@
+/*
+ * TongSheng TSDZ2 motor controller firmware/
+ *
+ * Copyright (C) Casainho, 2018.
+ *
+ * Released under the GPL License, Version 3
+ */
+
+#include "stm8s.h"
+#include "stm8s_tim2.h"
+
+// Timer2 is used to create the pulse signal for excitation of the torque sensor circuit
+// Pulse signal: period of 20us, Ton = 2us, Toff = 18us
+void timer2_init (void)
+{
+  uint16_t ui16_i;
+
+  // Timer2 clock = 2MHz; target: 20us period --> 50khz
+  // counter period = (1 / (2000000 / prescaler)) * (19 + 1) = 20us
+  TIM2_TimeBaseInit(TIM2_PRESCALER_2, 19);
+
+  // pulse of 2us
+  TIM2_OC2Init(TIM2_OCMODE_PWM1, TIM2_OUTPUTSTATE_ENABLE, 2, TIM2_OCPOLARITY_HIGH);
+  TIM2_OC2PreloadConfig(ENABLE);
+
+  TIM2_ARRPreloadConfig(ENABLE);
+
+  TIM2_Cmd(ENABLE);
+
+  // IMPORTANT: this software delay is needed so timer2 work after this
+  for(ui16_i = 0; ui16_i < (29000); ui16_i++) { ; }
+}

@@ -20,7 +20,7 @@
 // * PE7  (ADC_AIN8)    | in  | motor_total_current_filtered
 // * PD7                | in  | motor_total_over_current
 // *
-// * PE6  (ADC_AIN9)    | in  | battery_voltage
+ * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116;)
  *
  * PE5                | in  | Hall_sensor_A
  * PD2                | in  | Hall_sensor_B
@@ -60,15 +60,11 @@
 //#define CURRENT_MOTOR_TOTAL_OVER__PIN  		GPIO_PIN_7
 //#define CURRENT_MOTOR_TOTAL_OVER__PORT 		GPIOD
 
-//#define BATTERY_VOLTAGE__PIN      GPIO_PIN_6
-//#define BATTERY_VOLTAGE__PORT     GPIOE
-
 #define HALL_SENSOR_A__PIN      GPIO_PIN_5
-#define HALL_SENSOR_B__PIN      GPIO_PIN_5
-#define HALL_SENSOR_C__PIN      GPIO_PIN_2
-
 #define HALL_SENSOR_A__PORT       GPIOE
+#define HALL_SENSOR_B__PIN      GPIO_PIN_5
 #define HALL_SENSOR_B__PORT       GPIOC
+#define HALL_SENSOR_C__PIN      GPIO_PIN_2
 #define HALL_SENSOR_C__PORT       GPIOD
 
 #define PMW_PHASE_A_LOW__PIN      GPIO_PIN_2
@@ -92,17 +88,20 @@
 #define BRAKE__PIN                GPIO_PIN_6
 #define BRAKE__PORT               GPIOC
 
-//#define THROTTLE__PIN             GPIO_PIN_4
-//#define THROTTLE__PORT            GPIOB
-
 #define PAS1__PIN                 GPIO_PIN_0
 #define PAS1__PORT                GPIOE
 
 #define PAS2__PIN                 GPIO_PIN_7
-#define PAS2__PORT                GPIOD
+#define PAS2__PORT           	  GPIOD
 
 #define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_1
 #define WHEEL_SPEED_SENSOR__PORT  GPIOA
+
+#define TORQUE_SENSOR_EXCITATION__PIN 	GPIO_PIN_3
+#define TORQUE_SENSOR_EXCITATION__PORT	GPIOD
+
+#define TORQUE_SENSOR__PIN	  GPIO_PIN_3
+#define TORQUE_SENSOR__PORT	  GPIOB
 
 //#define DEBUG__PIN                GPIO_PIN_2
 //#define DEBUG__PORT               GPIOD

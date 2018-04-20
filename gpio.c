@@ -12,7 +12,9 @@
 
 void gpio_init (void)
 {
-
+  GPIO_Init(TORQUE_SENSOR_EXCITATION__PORT,
+	    TORQUE_SENSOR_EXCITATION__PIN,
+	    GPIO_MODE_OUT_OD_HIZ_FAST);
 }
 
 

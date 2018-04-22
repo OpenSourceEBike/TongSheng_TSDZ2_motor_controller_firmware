@@ -15,12 +15,12 @@ void timer2_init (void)
 {
   uint16_t ui16_i;
 
-  // Timer2 clock = 2MHz; target: 20us period --> 50khz
-  // counter period = (1 / (2000000 / prescaler)) * (19 + 1) = 20us
-  TIM2_TimeBaseInit(TIM2_PRESCALER_2, 19);
+  // Timer2 clock = 16MHz; target: 20us period --> 50khz
+  // counter period = (1 / (16000000 / prescaler)) * (159 + 1) = 20us
+  TIM2_TimeBaseInit(TIM2_PRESCALER_2, 159);
 
   // pulse of 2us
-  TIM2_OC2Init(TIM2_OCMODE_PWM1, TIM2_OUTPUTSTATE_ENABLE, 2, TIM2_OCPOLARITY_HIGH);
+  TIM2_OC2Init(TIM2_OCMODE_PWM1, TIM2_OUTPUTSTATE_ENABLE, 16, TIM2_OCPOLARITY_HIGH);
   TIM2_OC2PreloadConfig(ENABLE);
 
   TIM2_ARRPreloadConfig(ENABLE);

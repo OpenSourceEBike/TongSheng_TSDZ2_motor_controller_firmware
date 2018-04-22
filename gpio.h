@@ -8,9 +8,9 @@
 
 /* Connections:
  *
- * Motor PHASE_A: yellow wire
+ * Motor PHASE_A: blue wire
  * Motor PHASE_B: green wire
- * Motor PHASE_C: blue wire
+ * Motor PHASE_C: yellow wire
  *
  *
  * PIN		      | IN/OUT|Function
@@ -60,11 +60,11 @@
 //#define CURRENT_MOTOR_TOTAL_OVER__PIN  		GPIO_PIN_7
 //#define CURRENT_MOTOR_TOTAL_OVER__PORT 		GPIOD
 
-#define HALL_SENSOR_A__PIN      GPIO_PIN_5
+#define HALL_SENSOR_A__PIN        GPIO_PIN_5
 #define HALL_SENSOR_A__PORT       GPIOE
-#define HALL_SENSOR_B__PIN      GPIO_PIN_5
+#define HALL_SENSOR_B__PIN        GPIO_PIN_5
 #define HALL_SENSOR_B__PORT       GPIOC
-#define HALL_SENSOR_C__PIN      GPIO_PIN_2
+#define HALL_SENSOR_C__PIN        GPIO_PIN_2
 #define HALL_SENSOR_C__PORT       GPIOD
 
 #define PMW_PHASE_A_LOW__PIN      GPIO_PIN_2
@@ -92,16 +92,19 @@
 #define PAS1__PORT                GPIOE
 
 #define PAS2__PIN                 GPIO_PIN_7
-#define PAS2__PORT           	  GPIOD
+#define PAS2__PORT                GPIOD
 
 #define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_1
 #define WHEEL_SPEED_SENSOR__PORT  GPIOA
 
-#define TORQUE_SENSOR_EXCITATION__PIN 	GPIO_PIN_3
-#define TORQUE_SENSOR_EXCITATION__PORT	GPIOD
+#define TORQUE_SENSOR_EXCITATION__PIN   GPIO_PIN_3
+#define TORQUE_SENSOR_EXCITATION__PORT  GPIOD
 
 #define TORQUE_SENSOR__PIN	  GPIO_PIN_3
 #define TORQUE_SENSOR__PORT	  GPIOB
+
+#define LIGHTS__PIN               GPIO_PIN_2
+#define LIGHTS__PORT              GPIOE
 
 //#define DEBUG__PIN                GPIO_PIN_2
 //#define DEBUG__PORT               GPIOD

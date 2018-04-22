@@ -15,24 +15,14 @@
 
 void pwm_init (void)
 {
-  TIM1_CtrlPWMOutputs(DISABLE);
-
   TIM1_TimeBaseInit(0, // TIM1_Prescaler = 0
     TIM1_COUNTERMODE_UP,
     (1024 - 1), // clock = 16MHz; counter period = 1024; PWM freq = 16MHz / 1024 = 15.625kHz
     0); // TIM1_RepetitionCounter = 0
 
-
-#define DISABLE_PWM_CHANNELS_1_3
-
   TIM1_OC1Init(TIM1_OCMODE_PWM1,
-#ifdef DISABLE_PWM_CHANNELS
-    TIM1_OUTPUTSTATE_DISABLE,
-    TIM1_OUTPUTNSTATE_DISABLE,
-#else
     TIM1_OUTPUTSTATE_ENABLE,
-    TIM1_OUTPUTNSTATE_DISABLE,
-#endif
+    TIM1_OUTPUTSTATE_ENABLE,
     0, // initial duty_cycle value
     TIM1_OCPOLARITY_HIGH,
     TIM1_OCNPOLARITY_HIGH,
@@ -41,7 +31,7 @@ void pwm_init (void)
 
   TIM1_OC2Init(TIM1_OCMODE_PWM1,
     TIM1_OUTPUTSTATE_ENABLE,
-    TIM1_OUTPUTNSTATE_DISABLE,
+    TIM1_OUTPUTSTATE_ENABLE,
     0, // initial duty_cycle value
     TIM1_OCPOLARITY_HIGH,
     TIM1_OCNPOLARITY_HIGH,
@@ -49,13 +39,8 @@ void pwm_init (void)
     TIM1_OCNIDLESTATE_RESET);
 
   TIM1_OC3Init(TIM1_OCMODE_PWM1,
-#ifdef DISABLE_PWM_CHANNELS
-    TIM1_OUTPUTSTATE_DISABLE,
-    TIM1_OUTPUTNSTATE_DISABLE,
-#else
     TIM1_OUTPUTSTATE_ENABLE,
-    TIM1_OUTPUTNSTATE_DISABLE,
-#endif
+    TIM1_OUTPUTSTATE_ENABLE,
     0, // initial duty_cycle value
     TIM1_OCPOLARITY_HIGH,
     TIM1_OCNPOLARITY_HIGH,
@@ -71,8 +56,8 @@ void pwm_init (void)
     TIM1_BREAKPOLARITY_LOW,
     TIM1_AUTOMATICOUTPUT_DISABLE);
 
-  // OC4 is always ssyncronized with PWM
-  TIM1_OC4Init(TIM1_OCMODE_PWM1,
+  // OC4 is always syncronized with PWM
+  TIM1_OC4Init(TIM1_OCMODE_TIMING,
 	       TIM1_OUTPUTSTATE_DISABLE,
 	       0, // timming for interrupt firing
 	       TIM1_OCPOLARITY_HIGH,
@@ -83,7 +68,7 @@ void pwm_init (void)
 //  pwm_phase_b_disable ();
 //  pwm_phase_c_disable ();
 
-  TIM1_ITConfig(TIM1_IT_CC4, ENABLE);
+//  TIM1_ITConfig(TIM1_IT_CC4, ENABLE);
   TIM1_Cmd(ENABLE); // TIM1 counter enable
   TIM1_CtrlPWMOutputs(ENABLE);
 }

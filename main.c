@@ -49,6 +49,7 @@ void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER);
 void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER);
 void EXTI_PORTA_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER);
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -65,6 +66,9 @@ int main (void)
 {
   static uint32_t ui32_temp;
 
+  //set clock at the max 16MHz
+  CLK_HSIPrescalerConfig (CLK_PRESCALER_HSIDIV1);
+
   gpio_init ();
   brake_init ();
   while (brake_is_set()) ; // hold here while brake is pressed -- this is a protection for development
@@ -76,10 +80,7 @@ int main (void)
   hall_sensor_init ();
   motor_init ();
   timer2_init ();
-//  enableInterrupts ();
-  TIM1_SetCompare1 (511);
-  TIM1_SetCompare2 (511);
-  TIM1_SetCompare3 (511);
+  enableInterrupts ();
 
   adc_init ();
 

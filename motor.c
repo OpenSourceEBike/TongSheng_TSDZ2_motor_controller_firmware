@@ -98,53 +98,53 @@ void TIM1_CAP_COM_IRQHandler (void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 
     switch (ui8_hall_sensors_state)
 	  {
-//	    case 2:
-//      PHASE_A_HIGH_PWM_LOW_PWM
-//      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-//      PHASE_C_HIGH_ENABLE_LOW_DISABLE
-//	    break;
-//
-//	    case 6:
-//      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-//      PHASE_B_HIGH_DISABLE_LOW_ENABLE
-//      PHASE_C_HIGH_PWM_LOW_PWM
-//	    break;
-//
-//      // hall sensor A transition from high to low happens here
-//      // and considering BEMF phase A max value as the motor rotor 0 degrees position,
-//      // motor rotor should be at 0 degrees at this hall sensor signal transition
-//	    case 4:
-//      PHASE_A_HIGH_ENABLE_LOW_DISABLE
-//      PHASE_B_HIGH_PWM_LOW_PWM
-//      PHASE_C_HIGH_DISABLE_LOW_DISABLE
-//	    break;
-//
-//	    case 5:
-//      PHASE_A_HIGH_PWM_LOW_PWM
-//      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-//      PHASE_B_HIGH_DISABLE_LOW_ENABLE
-//	    break;
-//
-//	    case 1:
-//      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-//      PHASE_B_HIGH_ENABLE_LOW_DISABLE
-//      PHASE_C_HIGH_PWM_LOW_PWM
-//	    break;
-//
-//	    case 3:
-//      PHASE_A_HIGH_DISABLE_LOW_ENABLE
-//      PHASE_B_HIGH_PWM_LOW_PWM
-//      PHASE_C_HIGH_DISABLE_LOW_DISABLE
-//	    break;
+	    case 2:
+      PHASE_A_HIGH_PWM_LOW_PWM
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
+      PHASE_C_HIGH_ENABLE_LOW_DISABLE
+	    break;
+
+	    case 6:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_DISABLE_LOW_ENABLE
+      PHASE_C_HIGH_PWM_LOW_PWM
+	    break;
+
+      // hall sensor A transition from high to low happens here
+      // and considering BEMF phase A max value as the motor rotor 0 degrees position,
+      // motor rotor should be at 0 degrees at this hall sensor signal transition
+	    case 4:
+      PHASE_A_HIGH_ENABLE_LOW_DISABLE
+      PHASE_B_HIGH_PWM_LOW_PWM
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+	    break;
+
+	    case 5:
+      PHASE_A_HIGH_PWM_LOW_PWM
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_DISABLE_LOW_ENABLE
+	    break;
+
+	    case 1:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_ENABLE_LOW_DISABLE
+      PHASE_C_HIGH_PWM_LOW_PWM
+	    break;
+
+	    case 3:
+      PHASE_A_HIGH_DISABLE_LOW_ENABLE
+      PHASE_B_HIGH_PWM_LOW_PWM
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+	    break;
 
 	    default:
 	    return;
 	    break;
     }
-
-    // clears the TIM1 interrupt TIM1_IT_UPDATE pending bit
-    TIM1->SR1 = (uint8_t)(~(uint8_t)TIM1_IT_CC4);
   }
+
+  // clears the TIM1 interrupt TIM1_IT_UPDATE pending bit
+  TIM1->SR1 = (uint8_t)(~(uint8_t)TIM1_IT_CC4);
 }
 
 void hall_sensor_init (void)

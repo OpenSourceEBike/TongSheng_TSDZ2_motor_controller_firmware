@@ -80,25 +80,28 @@ int main (void)
   hall_sensor_init ();
   motor_init ();
   timer2_init ();
+  adc_init ();
   enableInterrupts ();
 
-  adc_init ();
+//  TIM1_SetAutoreload ();
 
   while (1)
   {
 //    printf ("%d - %d - %d - %d - %d\n", GPIOA->IDR, GPIOB->IDR, GPIOC->IDR, GPIOD->IDR, GPIOE->IDR);
 //    printf ("%d - %d\n", GPIO_ReadInputPin(PAS1__PORT, PAS1__PIN), GPIO_ReadInputPin(PAS2__PORT, PAS2__PIN));
 
-    printf ("%d,%d,%d,%d,%d,%d\n",
-	    (uint16_t) ADC1_GetBufferValue(3) >> 2,
-	    (uint16_t) ADC1_GetBufferValue(4) >> 2,
-	    (uint16_t) ADC1_GetBufferValue(5) >> 2,
-	    (uint16_t) ADC1_GetBufferValue(6) >> 2,
-	    (uint16_t) ADC1_GetBufferValue(7) >> 2,
-	    (uint16_t) ADC1_GetBufferValue(9) >> 2);
+//    printf ("%d,%d,%d,%d,%d,%d\n",
+//	    (uint16_t) ADC1_GetBufferValue(3) >> 2,
+//	    (uint16_t) ADC1_GetBufferValue(4) >> 2,
+//	    (uint16_t) ADC1_GetBufferValue(5) >> 2,
+//	    (uint16_t) ADC1_GetBufferValue(6) >> 2,
+//	    (uint16_t) ADC1_GetBufferValue(7) >> 2,
+//	    (uint16_t) ADC1_GetBufferValue(9) >> 2);
 
-//      printf ("%d\n",
-//  	    (uint16_t) ADC1_GetBufferValue(4));
+
+      TIM1_SetCompare1(ui8_adc_read_throttle());
+      TIM1_SetCompare2(ui8_adc_read_throttle());
+      TIM1_SetCompare3(ui8_adc_read_throttle());
   }
 
   return 0;

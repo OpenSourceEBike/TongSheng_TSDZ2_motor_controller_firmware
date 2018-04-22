@@ -106,6 +106,9 @@
 #define LIGHTS__PIN               GPIO_PIN_2
 #define LIGHTS__PORT              GPIOE
 
+#define THROTTLE__PIN             GPIO_PIN_7
+#define THROTTLE__PORT            GPIOB
+
 //#define DEBUG__PIN                GPIO_PIN_2
 //#define DEBUG__PORT               GPIOD
 

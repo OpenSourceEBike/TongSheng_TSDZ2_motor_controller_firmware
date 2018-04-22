@@ -30,11 +30,11 @@ void adc_init (void)
   ADC1_Init(ADC1_CONVERSIONMODE_CONTINUOUS,
 	    ADC1_CHANNEL_9,
 	    ADC1_PRESSEL_FCPU_D2,
-            ADC1_EXTTRIG_TIM,
+      ADC1_EXTTRIG_TIM,
 	    DISABLE,
-	    ADC1_ALIGN_RIGHT,
+	    ADC1_ALIGN_LEFT,
 	    0,
-            DISABLE);
+	    DISABLE);
 
   ADC1_DataBufferCmd (ENABLE);
   ADC1_ScanModeCmd (ENABLE);
@@ -75,9 +75,8 @@ uint16_t ui16_adc_read_phase_B_current (void)
 
 uint8_t ui8_adc_read_throttle (void)
 {
-// 0x53E0 + 2*4 = 0x53E8
-//  return *(uint8_t*)(0x53E8);
-  return *(uint8_t*)(0x53E8);
+// 0x53E0 + 2*7 = 0x53EE
+  return *(uint8_t*)(0x53EE);
 }
 
 uint8_t ui8_adc_read_battery_current (void)

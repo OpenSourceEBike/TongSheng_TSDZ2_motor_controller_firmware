@@ -100,7 +100,10 @@ int main (void)
 //	    (uint16_t) ADC1_GetBufferValue(7) >> 2,
 //	    (uint16_t) ADC1_GetBufferValue(9) >> 2);
 
-      ui8_temp = ui8_adc_read_throttle();
+      printf ("%d\n",
+        (uint16_t) ADC1_GetBufferValue(5) >> 2);
+
+      ui8_temp = UI8_ADC_THROTTLE;
 
       if (ui8_temp < 45) { ui8_temp = 0; }
       else { ui8_temp -= 45; }
@@ -113,8 +116,8 @@ int main (void)
 
       ui8_temp = (uint8_t) f_temp;
 
-      printf ("%d\n",
-              ui8_temp);
+//      printf ("%d\n",
+//              ui8_temp);
 
       TIM1_SetCompare1(ui8_temp << 2);
       TIM1_SetCompare2(ui8_temp << 2);

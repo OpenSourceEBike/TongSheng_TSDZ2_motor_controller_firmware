@@ -15,11 +15,7 @@
  *
  * PIN		      | IN/OUT|Function
  * ----------------------------------------------------------
-// * PB5  (ADC_AIN5)    | in  | phase_B_current
-// * PB6  (ADC_AIN6)    | in  | motor_total_current
-// * PE7  (ADC_AIN8)    | in  | motor_total_current_filtered
-// * PD7                | in  | motor_total_over_current
-// *
+ * PB5  (ADC_AIN5)    | in  | battery_current (14 ADC bits step per 1 amp)
  * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116;)
  *
  * PE5                | in  | Hall_sensor_A
@@ -37,11 +33,10 @@
  * PD6  (UART2_RX)    | out | usart_rx
  *
  * PC6                | in  | brake
-// * PB4  (ADC_AIN4)    | in  | throttle
+ * PB7  (ADC_AIN7)    | in  | throttle
  * PD7                | in  | PAS1 (yellow wire)
  * PE0                | in  | PAS2 (blue wire)
  * PA1                | in  | wheel speed
- *
  *
  */
 
@@ -50,36 +45,6 @@
 
 #include "main.h"
 #include "stm8s_gpio.h"
-
-//#define PHASE_B_CURRENT__PIN			GPIO_PIN_5
-//#define CURRENT_PHASE_B__PORT     		GPIOB
-//#define MOTOR_CURRENT__PIN 			GPIO_PIN_6
-//#define CURRENT_MOTOR_TOTAL__PORT 		GPIOB
-//#define BATTERY_CURRENT__PIN 			GPIO_PIN_7
-//#define CURRENT_MOTOR_TOTAL_FILTRED__PORT 	GPIOE
-//#define CURRENT_MOTOR_TOTAL_OVER__PIN  		GPIO_PIN_7
-//#define CURRENT_MOTOR_TOTAL_OVER__PORT 		GPIOD
-
-//#define HALL_SENSOR_A__PIN        GPIO_PIN_5
-//#define HALL_SENSOR_A__PORT       GPIOE
-//#define HALL_SENSOR_B__PIN        GPIO_PIN_5
-//#define HALL_SENSOR_B__PORT       GPIOC
-//#define HALL_SENSOR_C__PIN        GPIO_PIN_2
-//#define HALL_SENSOR_C__PORT       GPIOD
-
-//#define HALL_SENSOR_A__PIN        GPIO_PIN_2
-//#define HALL_SENSOR_A__PORT       GPIOD
-//#define HALL_SENSOR_B__PIN        GPIO_PIN_5
-//#define HALL_SENSOR_B__PORT       GPIOC
-//#define HALL_SENSOR_C__PIN        GPIO_PIN_5
-//#define HALL_SENSOR_C__PORT       GPIOE
-
-//#define HALL_SENSOR_A__PIN        GPIO_PIN_5
-//#define HALL_SENSOR_A__PORT       GPIOC
-//#define HALL_SENSOR_B__PIN        GPIO_PIN_2
-//#define HALL_SENSOR_B__PORT       GPIOD
-//#define HALL_SENSOR_C__PIN        GPIO_PIN_5
-//#define HALL_SENSOR_C__PORT       GPIOE
 
 #define HALL_SENSOR_A__PIN        GPIO_PIN_5
 #define HALL_SENSOR_A__PORT       GPIOE
@@ -121,8 +86,8 @@
 #define TORQUE_SENSOR_EXCITATION__PIN   GPIO_PIN_3
 #define TORQUE_SENSOR_EXCITATION__PORT  GPIOD
 
-#define TORQUE_SENSOR__PIN	  GPIO_PIN_3
-#define TORQUE_SENSOR__PORT	  GPIOB
+#define TORQUE_SENSOR__PIN        GPIO_PIN_3
+#define TORQUE_SENSOR__PORT	      GPIOB
 
 #define LIGHTS__PIN               GPIO_PIN_2
 #define LIGHTS__PORT              GPIOE
@@ -130,9 +95,8 @@
 #define THROTTLE__PIN             GPIO_PIN_7
 #define THROTTLE__PORT            GPIOB
 
-//#define DEBUG__PIN                GPIO_PIN_2
-//#define DEBUG__PORT               GPIOD
-
+#define BATTERY_CURRENT__PORT     GPIOB
+#define BATTERY_CURRENT__PIN      GPIO_PIN_5
 
 void gpio_init (void);
 

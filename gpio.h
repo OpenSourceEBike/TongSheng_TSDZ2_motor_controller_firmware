@@ -60,12 +60,33 @@
 //#define CURRENT_MOTOR_TOTAL_OVER__PIN  		GPIO_PIN_7
 //#define CURRENT_MOTOR_TOTAL_OVER__PORT 		GPIOD
 
+//#define HALL_SENSOR_A__PIN        GPIO_PIN_5
+//#define HALL_SENSOR_A__PORT       GPIOE
+//#define HALL_SENSOR_B__PIN        GPIO_PIN_5
+//#define HALL_SENSOR_B__PORT       GPIOC
+//#define HALL_SENSOR_C__PIN        GPIO_PIN_2
+//#define HALL_SENSOR_C__PORT       GPIOD
+
+//#define HALL_SENSOR_A__PIN        GPIO_PIN_2
+//#define HALL_SENSOR_A__PORT       GPIOD
+//#define HALL_SENSOR_B__PIN        GPIO_PIN_5
+//#define HALL_SENSOR_B__PORT       GPIOC
+//#define HALL_SENSOR_C__PIN        GPIO_PIN_5
+//#define HALL_SENSOR_C__PORT       GPIOE
+
+//#define HALL_SENSOR_A__PIN        GPIO_PIN_5
+//#define HALL_SENSOR_A__PORT       GPIOC
+//#define HALL_SENSOR_B__PIN        GPIO_PIN_2
+//#define HALL_SENSOR_B__PORT       GPIOD
+//#define HALL_SENSOR_C__PIN        GPIO_PIN_5
+//#define HALL_SENSOR_C__PORT       GPIOE
+
 #define HALL_SENSOR_A__PIN        GPIO_PIN_5
 #define HALL_SENSOR_A__PORT       GPIOE
-#define HALL_SENSOR_B__PIN        GPIO_PIN_5
-#define HALL_SENSOR_B__PORT       GPIOC
-#define HALL_SENSOR_C__PIN        GPIO_PIN_2
-#define HALL_SENSOR_C__PORT       GPIOD
+#define HALL_SENSOR_B__PIN        GPIO_PIN_2
+#define HALL_SENSOR_B__PORT       GPIOD
+#define HALL_SENSOR_C__PIN        GPIO_PIN_5
+#define HALL_SENSOR_C__PORT       GPIOC
 
 #define PMW_PHASE_A_LOW__PIN      GPIO_PIN_2
 #define PMW_PHASE_A_LOW__PORT     GPIOB

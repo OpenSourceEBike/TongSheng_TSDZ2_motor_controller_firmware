@@ -14,14 +14,9 @@
 #include "pwm.h"
 #include "stm8s_tim1.h"
 
+#define TIM1_CHANNEL_PHASE_A TIM1_CHANNEL_3
+#define TIM1_CHANNEL_PHASE_B TIM1_CHANNEL_2
 #define TIM1_CHANNEL_PHASE_C TIM1_CHANNEL_1
-#define TIM1_CHANNEL_PHASE_A TIM1_CHANNEL_2
-#define TIM1_CHANNEL_PHASE_B TIM1_CHANNEL_3
-
-#define PHASE_A_HIGH_ENABLE_LOW_DISABLE \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_A,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_ACTIVE); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_A, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_A, ENABLE);
 
 #define PHASE_A_HIGH_DISABLE_LOW_ENABLE \
   TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_A,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_INACTIVE); \
@@ -37,12 +32,6 @@
   TIM1_CCxCmd(TIM1_CHANNEL_PHASE_A, ENABLE); \
   TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_A, ENABLE);
 
-
-#define PHASE_B_HIGH_ENABLE_LOW_DISABLE \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_B,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_ACTIVE); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_B, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_B, ENABLE);
-
 #define PHASE_B_HIGH_DISABLE_LOW_ENABLE \
   TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_B,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_INACTIVE); \
   TIM1_CCxCmd(TIM1_CHANNEL_PHASE_B, ENABLE); \
@@ -57,11 +46,6 @@
   TIM1_CCxCmd(TIM1_CHANNEL_PHASE_B, ENABLE); \
   TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_B, ENABLE);
 
-
-#define PHASE_C_HIGH_ENABLE_LOW_DISABLE \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_C,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_ACTIVE); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_C, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_C, ENABLE);
 
 #define PHASE_C_HIGH_DISABLE_LOW_ENABLE \
   TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_C,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_INACTIVE); \
@@ -87,59 +71,82 @@ void TIM1_CAP_COM_IRQHandler (void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 {
   // read hall sensors signal
   ui8_hall_sensors_state = ((HALL_SENSOR_A__PORT->IDR & HALL_SENSOR_A__PIN) >> 5) |
-  ((HALL_SENSOR_B__PORT->IDR & HALL_SENSOR_B__PIN) >> 4) |
-  (HALL_SENSOR_C__PORT->IDR & HALL_SENSOR_C__PIN);
+  ((HALL_SENSOR_B__PORT->IDR & HALL_SENSOR_B__PIN) >> 1) |
+  ((HALL_SENSOR_C__PORT->IDR & HALL_SENSOR_C__PIN) >> 3);
 
-  // hall sensors sequence: 2, 6, 4, 5, 1, 3
+  // hall sensors sequence: 5, 1, 3, 2, 6, 4
   // make sure we run next code only when there is a change on the hall sensors signal
   if (ui8_hall_sensors_state != ui8_hall_sensors_last_state)
   {
     ui8_hall_sensors_last_state = ui8_hall_sensors_state;
-
     switch (ui8_hall_sensors_state)
-	  {
-	    case 2:
-      PHASE_A_HIGH_PWM_LOW_PWM
+    {
+      case 5:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
       PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_ENABLE_LOW_DISABLE
-	    break;
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
 
-	    case 6:
+      PHASE_A_HIGH_DISABLE_LOW_ENABLE
+      PHASE_B_HIGH_PWM_LOW_PWM
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+      break;
+
+      case 1:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+
+      PHASE_A_HIGH_DISABLE_LOW_ENABLE
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
+      PHASE_C_HIGH_PWM_LOW_PWM
+      break;
+
+      case 3:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+
       PHASE_A_HIGH_DISABLE_LOW_DISABLE
       PHASE_B_HIGH_DISABLE_LOW_ENABLE
       PHASE_C_HIGH_PWM_LOW_PWM
-	    break;
+      break;
 
       // hall sensor A transition from high to low happens here
       // and considering BEMF phase A max value as the motor rotor 0 degrees position,
       // motor rotor should be at 0 degrees at this hall sensor signal transition
-	    case 4:
-      PHASE_A_HIGH_ENABLE_LOW_DISABLE
-      PHASE_B_HIGH_PWM_LOW_PWM
+      case 2:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
       PHASE_C_HIGH_DISABLE_LOW_DISABLE
-	    break;
 
-	    case 5:
+      PHASE_A_HIGH_PWM_LOW_PWM
+      PHASE_B_HIGH_DISABLE_LOW_ENABLE
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+      break;
+
+      case 6:
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
+      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+
       PHASE_A_HIGH_PWM_LOW_PWM
       PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_ENABLE
-	    break;
+      PHASE_C_HIGH_DISABLE_LOW_ENABLE
+      break;
 
-	    case 1:
+      case 4:
       PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_ENABLE_LOW_DISABLE
-      PHASE_C_HIGH_PWM_LOW_PWM
-	    break;
-
-	    case 3:
-      PHASE_A_HIGH_DISABLE_LOW_ENABLE
-      PHASE_B_HIGH_PWM_LOW_PWM
+      PHASE_B_HIGH_DISABLE_LOW_DISABLE
       PHASE_C_HIGH_DISABLE_LOW_DISABLE
-	    break;
 
-	    default:
-	    return;
-	    break;
+      PHASE_A_HIGH_DISABLE_LOW_DISABLE
+      PHASE_B_HIGH_PWM_LOW_PWM
+      PHASE_C_HIGH_DISABLE_LOW_ENABLE
+      break;
+
+      default:
+      return;
+      break;
     }
   }
 

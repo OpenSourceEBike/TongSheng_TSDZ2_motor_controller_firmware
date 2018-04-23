@@ -65,6 +65,8 @@ void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
 int main (void)
 {
   static uint32_t ui32_temp;
+  static uint8_t ui8_temp;
+  static float f_temp;
 
   //set clock at the max 16MHz
   CLK_HSIPrescalerConfig (CLK_PRESCALER_HSIDIV1);
@@ -98,10 +100,25 @@ int main (void)
 //	    (uint16_t) ADC1_GetBufferValue(7) >> 2,
 //	    (uint16_t) ADC1_GetBufferValue(9) >> 2);
 
+      ui8_temp = ui8_adc_read_throttle();
 
-      TIM1_SetCompare1(ui8_adc_read_throttle());
-      TIM1_SetCompare2(ui8_adc_read_throttle());
-      TIM1_SetCompare3(ui8_adc_read_throttle());
+      if (ui8_temp < 45) { ui8_temp = 0; }
+      else { ui8_temp -= 45; }
+
+      f_temp = (float) ui8_temp * 2;
+      if (f_temp > 255)
+      {
+        f_temp = 255;
+      }
+
+      ui8_temp = (uint8_t) f_temp;
+
+      printf ("%d\n",
+              ui8_temp);
+
+      TIM1_SetCompare1(ui8_temp << 2);
+      TIM1_SetCompare2(ui8_temp << 2);
+      TIM1_SetCompare3(ui8_temp << 2);
   }
 
   return 0;

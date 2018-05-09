@@ -18,7 +18,7 @@
 //#include "pwm.h"
 
 // Brake signal
-void EXTI_PORTA_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER)
+void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTC_IRQHANDLER)
 {
 //  if (brake_is_set())
 //  {

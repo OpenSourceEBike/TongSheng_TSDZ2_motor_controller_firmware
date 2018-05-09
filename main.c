@@ -43,26 +43,12 @@ int main (void);
 // *** buffer overflow detected ***: sdcc terminated
 // Caught signal 6: SIGABRT
 
-// UART2 Receive interrupt
-void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER);
 // PWM cycle interrupt
 void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER);
 void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER);
-void throttle_read (void);
-
-uint8_t ui8_throttle_value;
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-
-// This is the interrupt that happens when UART2 receives data.
-void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
-{
-  if(UART2_GetFlagStatus(UART2_FLAG_RXNE) == SET)
-  {
-//    ui8_byte_received = UART2_ReceiveData8 ();
-  }
-}
 
 int main (void)
 {
@@ -76,8 +62,6 @@ int main (void)
   gpio_init ();
   brake_init ();
   while (brake_is_set()) ; // hold here while brake is pressed -- this is a protection for development
-  pas_init ();
-  wheel_speed_sensor_init ();
   uart2_init ();
   pwm_init_bipolar_4q ();
   hall_sensor_init ();

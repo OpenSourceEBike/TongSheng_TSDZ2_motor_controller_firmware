@@ -6,6 +6,12 @@
  * Released under the GPL License, Version 3
  */
 
+#ifndef _GPIO_H_
+#define _GPIO_H_
+
+#include "main.h"
+#include "stm8s_gpio.h"
+
 /* Connections:
  *
  * Motor PHASE_A: blue wire
@@ -13,7 +19,7 @@
  * Motor PHASE_C: yellow wire
  *
  *
- * PIN		      | IN/OUT|Function
+ * PIN                | IN/OUT|Function
  * ----------------------------------------------------------
  * PB5  (ADC_AIN5)    | in  | battery_current (14 ADC bits step per 1 amp)
  * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116;)
@@ -38,62 +44,58 @@
  * PE0                | in  | PAS2 (blue wire)
  * PA1                | in  | wheel speed
  *
+ * PD3                | out | torque sensor excitation
+ * PB3  (ADC_AIN3)    | in  | torque sensor
+ *
  */
 
-#ifndef _GPIO_H_
-#define _GPIO_H_
-
-#include "main.h"
-#include "stm8s_gpio.h"
-
-#define HALL_SENSOR_A__PIN        GPIO_PIN_5
 #define HALL_SENSOR_A__PORT       GPIOE
-#define HALL_SENSOR_B__PIN        GPIO_PIN_2
+#define HALL_SENSOR_A__PIN        GPIO_PIN_5
 #define HALL_SENSOR_B__PORT       GPIOD
-#define HALL_SENSOR_C__PIN        GPIO_PIN_5
+#define HALL_SENSOR_B__PIN        GPIO_PIN_2
 #define HALL_SENSOR_C__PORT       GPIOC
+#define HALL_SENSOR_C__PIN        GPIO_PIN_5
 
-#define PMW_PHASE_A_LOW__PIN      GPIO_PIN_2
 #define PMW_PHASE_A_LOW__PORT     GPIOB
-#define PMW_PHASE_B_LOW__PIN      GPIO_PIN_1
+#define PMW_PHASE_A_LOW__PIN      GPIO_PIN_2
 #define PMW_PHASE_B_LOW__PORT     GPIOB
-#define PMW_PHASE_C_LOW__PIN      GPIO_PIN_0
+#define PMW_PHASE_B_LOW__PIN      GPIO_PIN_1
 #define PMW_PHASE_C_LOW__PORT     GPIOB
-#define PMW_PHASE_A_HIGH__PIN     GPIO_PIN_3
+#define PMW_PHASE_C_LOW__PIN      GPIO_PIN_0
 #define PMW_PHASE_A_HIGH__PORT    GPIOC
-#define PMW_PHASE_B_HIGH__PIN     GPIO_PIN_2
+#define PMW_PHASE_A_HIGH__PIN     GPIO_PIN_3
 #define PMW_PHASE_B_HIGH__PORT    GPIOC
-#define PMW_PHASE_C_HIGH__PIN     GPIO_PIN_1
+#define PMW_PHASE_B_HIGH__PIN     GPIO_PIN_2
 #define PMW_PHASE_C_HIGH__PORT    GPIOC
+#define PMW_PHASE_C_HIGH__PIN     GPIO_PIN_1
 
-#define UART2_TX__PIN             GPIO_PIN_5
 #define UART2_TX__PORT            GPIOD
-#define UART2_RX__PIN             GPIO_PIN_6
+#define UART2_TX__PIN             GPIO_PIN_5
 #define UART2_RX__PORT            GPIOD
+#define UART2_RX__PIN             GPIO_PIN_6
 
-#define BRAKE__PIN                GPIO_PIN_6
 #define BRAKE__PORT               GPIOC
+#define BRAKE__PIN                GPIO_PIN_6
 
-#define PAS1__PIN                 GPIO_PIN_0
 #define PAS1__PORT                GPIOE
-
-#define PAS2__PIN                 GPIO_PIN_7
+#define PAS1__PIN                 GPIO_PIN_0
 #define PAS2__PORT                GPIOD
+#define PAS2__PIN                 GPIO_PIN_7
 
-#define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_1
 #define WHEEL_SPEED_SENSOR__PORT  GPIOA
+#define WHEEL_SPEED_SENSOR__PIN   GPIO_PIN_1
 
-#define TORQUE_SENSOR_EXCITATION__PIN   GPIO_PIN_3
 #define TORQUE_SENSOR_EXCITATION__PORT  GPIOD
+#define TORQUE_SENSOR_EXCITATION__PIN   GPIO_PIN_3
 
+#define TORQUE_SENSOR__PORT       GPIOB
 #define TORQUE_SENSOR__PIN        GPIO_PIN_3
-#define TORQUE_SENSOR__PORT	      GPIOB
 
-#define LIGHTS__PIN               GPIO_PIN_2
 #define LIGHTS__PORT              GPIOE
+#define LIGHTS__PIN               GPIO_PIN_2
 
-#define THROTTLE__PIN             GPIO_PIN_7
 #define THROTTLE__PORT            GPIOB
+#define THROTTLE__PIN             GPIO_PIN_7
 
 #define BATTERY_CURRENT__PORT     GPIOB
 #define BATTERY_CURRENT__PIN      GPIO_PIN_5

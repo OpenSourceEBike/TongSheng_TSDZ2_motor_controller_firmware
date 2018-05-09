@@ -49,7 +49,7 @@ void brake_init (void)
 	    GPIO_MODE_IN_FL_IT); // with external interrupt
 
   //initialize the Interrupt sensitivity
-  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOA,
+  EXTI_SetExtIntSensitivity(EXTI_PORT_GPIOC,
 			    EXTI_SENSITIVITY_RISE_FALL);
 }
 

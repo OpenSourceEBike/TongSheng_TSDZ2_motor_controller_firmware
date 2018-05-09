@@ -47,13 +47,15 @@ int main (void);
 void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER);
 // PWM cycle interrupt
 void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER);
-void EXTI_PORTA_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER);
+void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER);
+void throttle_read (void);
 
+uint8_t ui8_throttle_value;
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-// This is the interrupt that happesn when UART2 receives data.
+// This is the interrupt that happens when UART2 receives data.
 void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
 {
   if(UART2_GetFlagStatus(UART2_FLAG_RXNE) == SET)
@@ -64,9 +66,9 @@ void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
 
 int main (void)
 {
-  static uint32_t ui32_temp;
-  static uint8_t ui8_temp;
-  static float f_temp;
+  uint16_t ui16_TIM3_counter = 0;
+  uint16_t ui16_ebike_app_controller_counter = 0;
+  uint16_t ui16_debug_uart_counter = 0;
 
   //set clock at the max 16MHz
   CLK_HSIPrescalerConfig (CLK_PRESCALER_HSIDIV1);
@@ -74,54 +76,45 @@ int main (void)
   gpio_init ();
   brake_init ();
   while (brake_is_set()) ; // hold here while brake is pressed -- this is a protection for development
-  pas1_init ();
-  pas2_init ();
+  pas_init ();
   wheel_speed_sensor_init ();
-  uart_init ();
-  pwm_init ();
+  uart2_init ();
+  pwm_init_bipolar_4q ();
   hall_sensor_init ();
   motor_init ();
   timer2_init ();
+  timer3_init ();
   adc_init ();
+  ebike_app_init ();
   enableInterrupts ();
-
-//  TIM1_SetAutoreload ();
 
   while (1)
   {
-//    printf ("%d - %d - %d - %d - %d\n", GPIOA->IDR, GPIOB->IDR, GPIOC->IDR, GPIOD->IDR, GPIOE->IDR);
-//    printf ("%d - %d\n", GPIO_ReadInputPin(PAS1__PORT, PAS1__PIN), GPIO_ReadInputPin(PAS2__PORT, PAS2__PIN));
+    // because of continue; at the end of each if code block that will stop the while (1) loop there,
+    // the first if block code will have the higher priority over any others
+    ui16_TIM3_counter = TIM3_GetCounter ();
+    if ((ui16_TIM3_counter - ui16_ebike_app_controller_counter) > 100) // every 100ms
+    {
+      ui16_ebike_app_controller_counter = ui16_TIM3_counter;
+      ebike_app_controller ();
+      continue;
+    }
 
-//    printf ("%d,%d,%d,%d,%d,%d\n",
-//	    (uint16_t) ADC1_GetBufferValue(3) >> 2,
-//	    (uint16_t) ADC1_GetBufferValue(4) >> 2,
-//	    (uint16_t) ADC1_GetBufferValue(5) >> 2,
-//	    (uint16_t) ADC1_GetBufferValue(6) >> 2,
-//	    (uint16_t) ADC1_GetBufferValue(7) >> 2,
-//	    (uint16_t) ADC1_GetBufferValue(9) >> 2);
+#ifdef DEBUG_UART
+    ui16_TIM3_counter = TIM3_GetCounter ();
+    if ((ui16_TIM3_counter - ui16_debug_uart_counter) > 20) // every 20ms
+    {
+      ui16_debug_uart_counter = ui16_TIM3_counter;
 
-      printf ("%d\n",
-        (uint16_t) ADC1_GetBufferValue(5) >> 2);
-
-      ui8_temp = UI8_ADC_THROTTLE;
-
-      if (ui8_temp < 45) { ui8_temp = 0; }
-      else { ui8_temp -= 45; }
-
-      f_temp = (float) ui8_temp * 2;
-      if (f_temp > 255)
-      {
-        f_temp = 255;
-      }
-
-      ui8_temp = (uint8_t) f_temp;
-
-//      printf ("%d\n",
-//              ui8_temp);
-
-      TIM1_SetCompare1(ui8_temp << 2);
-      TIM1_SetCompare2(ui8_temp << 2);
-      TIM1_SetCompare3(ui8_temp << 2);
+      // sugestion: no more than 6 variables printed (takes about 3ms to printf 6 variables)
+      printf ("%d,%d,%d,%d\n",
+        ui16_motor_get_motor_speed_erps(),
+        ui8_duty_cycle,
+        UI8_ADC_BATTERY_CURRENT,
+        ui8_angle_correction);
+      continue;
+    }
+#endif
   }
 
   return 0;

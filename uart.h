@@ -11,7 +11,7 @@
 
 #include "main.h"
 
-void uart_init (void);
+void uart2_init (void);
 
 #if __SDCC_REVISION < 9624
 void putchar(char c);

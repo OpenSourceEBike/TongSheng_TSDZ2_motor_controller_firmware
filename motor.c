@@ -6,152 +6,671 @@
  * Released under the GPL License, Version 3
  */
 
+#include "motor.h"
 #include <stdint.h>
 #include <stdio.h>
 #include "interrupts.h"
+#include "stm8s_gpio.h"
+#include "stm8s_tim1.h"
 #include "motor.h"
+#include "ebike_app.h"
 #include "gpio.h"
 #include "pwm.h"
-#include "stm8s_tim1.h"
+#include "config.h"
+#include "adc.h"
+#include "utils.h"
+#include "uart.h"
+#include "adc.h"
+#include "watchdog.h"
 
-#define TIM1_CHANNEL_PHASE_A TIM1_CHANNEL_3
-#define TIM1_CHANNEL_PHASE_B TIM1_CHANNEL_2
-#define TIM1_CHANNEL_PHASE_C TIM1_CHANNEL_1
+#define SVM_TABLE_LEN 256
 
-#define PHASE_A_HIGH_DISABLE_LOW_ENABLE \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_A,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_INACTIVE); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_A, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_A, ENABLE);
+uint8_t ui8_svm_table [SVM_TABLE_LEN] =
+{
+    239 ,
+    241 ,
+    242 ,
+    243 ,
+    245 ,
+    246 ,
+    247 ,
+    248 ,
+    249 ,
+    250 ,
+    251 ,
+    251 ,
+    252 ,
+    253 ,
+    253 ,
+    254 ,
+    254 ,
+    254 ,
+    255 ,
+    255 ,
+    255 ,
+    255 ,
+    255 ,
+    255 ,
+    254 ,
+    254 ,
+    254 ,
+    253 ,
+    253 ,
+    252 ,
+    251 ,
+    250 ,
+    250 ,
+    249 ,
+    248 ,
+    247 ,
+    245 ,
+    244 ,
+    243 ,
+    242 ,
+    240 ,
+    239 ,
+    236 ,
+    231 ,
+    227 ,
+    222 ,
+    217 ,
+    212 ,
+    207 ,
+    202 ,
+    197 ,
+    191 ,
+    186 ,
+    181 ,
+    176 ,
+    170 ,
+    165 ,
+    160 ,
+    154 ,
+    149 ,
+    144 ,
+    138 ,
+    133 ,
+    127 ,
+    122 ,
+    116 ,
+    111 ,
+    106 ,
+    100 ,
+    95  ,
+    89  ,
+    84  ,
+    79  ,
+    74  ,
+    68  ,
+    63  ,
+    58  ,
+    53  ,
+    48  ,
+    43  ,
+    38  ,
+    33  ,
+    28  ,
+    23  ,
+    18  ,
+    16  ,
+    14  ,
+    13  ,
+    12  ,
+    10  ,
+    9 ,
+    8 ,
+    7 ,
+    6 ,
+    5 ,
+    4 ,
+    3 ,
+    3 ,
+    2 ,
+    1 ,
+    1 ,
+    1 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    1 ,
+    1 ,
+    2 ,
+    2 ,
+    3 ,
+    4 ,
+    5 ,
+    6 ,
+    6 ,
+    8 ,
+    9 ,
+    10  ,
+    11  ,
+    12  ,
+    14  ,
+    15  ,
+    17  ,
+    15  ,
+    14  ,
+    12  ,
+    11  ,
+    10  ,
+    9 ,
+    8 ,
+    6 ,
+    6 ,
+    5 ,
+    4 ,
+    3 ,
+    2 ,
+    2 ,
+    1 ,
+    1 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    0 ,
+    1 ,
+    1 ,
+    1 ,
+    2 ,
+    3 ,
+    3 ,
+    4 ,
+    5 ,
+    6 ,
+    7 ,
+    8 ,
+    9 ,
+    10  ,
+    12  ,
+    13  ,
+    14  ,
+    16  ,
+    18  ,
+    23  ,
+    28  ,
+    33  ,
+    38  ,
+    43  ,
+    48  ,
+    53  ,
+    58  ,
+    63  ,
+    68  ,
+    74  ,
+    79  ,
+    84  ,
+    89  ,
+    95  ,
+    100 ,
+    106 ,
+    111 ,
+    116 ,
+    122 ,
+    127 ,
+    133 ,
+    138 ,
+    144 ,
+    149 ,
+    154 ,
+    160 ,
+    165 ,
+    170 ,
+    176 ,
+    181 ,
+    186 ,
+    191 ,
+    197 ,
+    202 ,
+    207 ,
+    212 ,
+    217 ,
+    222 ,
+    227 ,
+    231 ,
+    236 ,
+    239 ,
+    240 ,
+    242 ,
+    243 ,
+    244 ,
+    245 ,
+    247 ,
+    248 ,
+    249 ,
+    250 ,
+    250 ,
+    251 ,
+    252 ,
+    253 ,
+    253 ,
+    254 ,
+    254 ,
+    254 ,
+    255 ,
+    255 ,
+    255 ,
+    255 ,
+    255 ,
+    255 ,
+    254 ,
+    254 ,
+    254 ,
+    253 ,
+    253 ,
+    252 ,
+    251 ,
+    251 ,
+    250 ,
+    249 ,
+    248 ,
+    247 ,
+    246 ,
+    245 ,
+    243 ,
+    242 ,
+    241 ,
+    239 ,
+    238 ,
+};
 
-#define PHASE_A_HIGH_DISABLE_LOW_DISABLE \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_A, DISABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_A, DISABLE);
+uint16_t ui16_PWM_cycles_counter = 1;
+uint16_t ui16_PWM_cycles_counter_6 = 1;
+uint16_t ui16_PWM_cycles_counter_total = 0xffff;
 
-#define PHASE_A_HIGH_PWM_LOW_PWM \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_A,(TIM1_OCMode_TypeDef)TIM1_OCMODE_PWM1); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_A, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_A, ENABLE);
+volatile uint16_t ui16_motor_speed_erps = 0;
+uint8_t ui8_sinewave_table_index = 0;
+uint8_t ui8_motor_rotor_absolute_angle;
+uint8_t ui8_motor_rotor_angle;
 
-#define PHASE_B_HIGH_DISABLE_LOW_ENABLE \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_B,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_INACTIVE); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_B, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_B, ENABLE);
+volatile uint8_t ui8_angle_correction = 0;
+uint8_t ui8_interpolation_angle = 0;
 
-#define PHASE_B_HIGH_DISABLE_LOW_DISABLE \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_B, DISABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_B, DISABLE);
-
-#define PHASE_B_HIGH_PWM_LOW_PWM \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_B,(TIM1_OCMode_TypeDef)TIM1_OCMODE_PWM1); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_B, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_B, ENABLE);
-
-
-#define PHASE_C_HIGH_DISABLE_LOW_ENABLE \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_C,(TIM1_OCMode_TypeDef)TIM1_FORCEDACTION_INACTIVE); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_C, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_C, ENABLE);
-
-#define PHASE_C_HIGH_DISABLE_LOW_DISABLE \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_C, DISABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_C, DISABLE);
-
-#define PHASE_C_HIGH_PWM_LOW_PWM \
-  TIM1_SelectOCxM(TIM1_CHANNEL_PHASE_C,(TIM1_OCMode_TypeDef)TIM1_OCMODE_PWM1); \
-  TIM1_CCxCmd(TIM1_CHANNEL_PHASE_C, ENABLE); \
-  TIM1_CCxNCmd(TIM1_CHANNEL_PHASE_C, ENABLE);
-
-
+uint8_t ui8_motor_commutation_type = BLOCK_COMMUTATION;
+volatile uint8_t ui8_motor_controller_state = MOTOR_CONTROLLER_STATE_OK;
 
 uint8_t ui8_hall_sensors_state = 0;
-uint8_t ui8_hall_sensors_last_state = 0;
+uint8_t ui8_hall_sensors_state_last = 0;
+
+volatile uint8_t ui8_adc_target_motor_current_max;
+
+volatile uint8_t ui8_adc_motor_current;
+uint8_t ui8_adc_motor_current_offset;
+
+uint8_t ui8_half_erps_flag = 0;
+
+volatile uint8_t ui8_duty_cycle = 0;
+uint8_t ui8_duty_cycle_target;
+uint16_t ui16_duty_cycle_ramp_up_inverse_step;
+uint16_t ui16_duty_cycle_ramp_down_inverse_step;
+uint16_t ui16_counter_duty_cycle_ramp_up = 0;
+uint16_t ui16_counter_duty_cycle_ramp_down = 0;
+uint8_t ui8_phase_a_voltage;
+uint8_t ui8_phase_b_voltage;
+uint8_t ui8_phase_c_voltage;
+uint16_t ui16_value;
+
+uint8_t ui8_first_time_run_flag = 1;
+
+// Measures did with a 24V Q85 328 RPM motor, rotating motor backwards by hand:
+// Hall sensor A positivie to negative transition | BEMF phase B at max value / top of sinewave
+// Hall sensor B positivie to negative transition | BEMF phase A at max value / top of sinewave
+// Hall sensor C positive to negative transition | BEMF phase C at max value / top of sinewave
 
 // runs every 64us (PWM frequency)
-void TIM1_CAP_COM_IRQHandler (void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
+void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 {
-  // read hall sensors signal
+  uint8_t ui8_temp;
+
+  /****************************************************************************/
+  // read motor current ADC value
+  // disable scan mode
+  ADC1->CR2 &= (uint8_t)(~ADC1_CR2_SCAN);
+  // clear EOC flag first (selected also channel 6)
+  ADC1->CSR = 0x06;
+  // start ADC1 conversion
+  ADC1->CR1 |= ADC1_CR1_ADON;
+  while (!(ADC1->CSR & ADC1_FLAG_EOC)) ;
+  ui8_adc_motor_current = ADC1->DRH;
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // trigger ADC conversion of all channels (scan conversion, buffered)
+  ADC1->CR2 |= ADC1_CR2_SCAN; // enable scan mode
+  ADC1->CSR = 0x09; // clear EOC flag first (selected also channel 9)
+  ADC1->CR1 |= ADC1_CR1_ADON; // start ADC1 conversion
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // read hall sensor signals and:
+  // - find the motor rotor absolute angle
+  // - read FOC Id current and calc FOC (adjust ui8_angle_correction)
+  // - calc motor speed in erps (ui16_motor_speed_erps)
+
+  // read hall sensors signal pins and mask other pins
+  // hall sensors sequence with motor forward rotation: 4, 6, 2, 3, 1, 5
   ui8_hall_sensors_state = ((HALL_SENSOR_A__PORT->IDR & HALL_SENSOR_A__PIN) >> 5) |
   ((HALL_SENSOR_B__PORT->IDR & HALL_SENSOR_B__PIN) >> 1) |
   ((HALL_SENSOR_C__PORT->IDR & HALL_SENSOR_C__PIN) >> 3);
-
-  // hall sensors sequence: 5, 1, 3, 2, 6, 4
   // make sure we run next code only when there is a change on the hall sensors signal
-  if (ui8_hall_sensors_state != ui8_hall_sensors_last_state)
+  if (ui8_hall_sensors_state != ui8_hall_sensors_state_last)
   {
-    ui8_hall_sensors_last_state = ui8_hall_sensors_state;
+    ui8_hall_sensors_state_last = ui8_hall_sensors_state;
+
     switch (ui8_hall_sensors_state)
     {
-      case 5:
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
-
-      PHASE_A_HIGH_DISABLE_LOW_ENABLE
-      PHASE_B_HIGH_PWM_LOW_PWM
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+      case 3:
+      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
+      {
+        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_150;
+      }
       break;
 
       case 1:
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+      if (ui8_half_erps_flag == 1)
+      {
+        ui8_half_erps_flag = 0;
+        ui16_PWM_cycles_counter_total = ui16_PWM_cycles_counter;
+        ui16_PWM_cycles_counter = 1;
 
-      PHASE_A_HIGH_DISABLE_LOW_ENABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_PWM_LOW_PWM
+        // this division takes 4.4us and without the cast (uint16_t) PWM_CYCLES_SECOND, would take 111us!! Verified on 2017.11.20
+        // avoid division by 0
+        if (ui16_PWM_cycles_counter_total > 0) { ui16_motor_speed_erps = ((uint16_t) PWM_CYCLES_SECOND) / ui16_PWM_cycles_counter_total; }
+        else { ui16_motor_speed_erps = ((uint16_t) PWM_CYCLES_SECOND); }
+
+        // update motor commutation state based on motor speed
+#ifdef DO_SINEWAVE_INTERPOLATION_360_DEGREES
+        if (ui16_motor_speed_erps > MOTOR_ROTOR_ERPS_START_INTERPOLATION_360_DEGREES)
+        {
+          if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_60_DEGREES)
+          {
+            ui8_motor_commutation_type = SINEWAVE_INTERPOLATION_360_DEGREES;
+          }
+        }
+        else
+        {
+          if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_360_DEGREES)
+          {
+            ui8_motor_commutation_type = SINEWAVE_INTERPOLATION_60_DEGREES;
+          }
+        }
+#endif
+        if (ui16_motor_speed_erps > MOTOR_ROTOR_ERPS_START_INTERPOLATION_60_DEGREES)
+        {
+          if (ui8_motor_commutation_type == BLOCK_COMMUTATION)
+          {
+            ui8_motor_commutation_type = SINEWAVE_INTERPOLATION_60_DEGREES;
+            ui8_ebike_app_state = EBIKE_APP_STATE_MOTOR_RUNNING;
+          }
+        }
+        else
+        {
+          if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_60_DEGREES)
+          {
+            ui8_motor_commutation_type = BLOCK_COMMUTATION;
+            ui8_angle_correction = 0;
+          }
+        }
+      }
+
+      ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_210;
       break;
 
-      case 3:
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+      case 5:
 
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_ENABLE
-      PHASE_C_HIGH_PWM_LOW_PWM
-      break;
-
-      // hall sensor A transition from high to low happens here
-      // and considering BEMF phase A max value as the motor rotor 0 degrees position,
-      // motor rotor should be at 0 degrees at this hall sensor signal transition
-      case 2:
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
-
-      PHASE_A_HIGH_PWM_LOW_PWM
-      PHASE_B_HIGH_DISABLE_LOW_ENABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
-      break;
-
-      case 6:
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
-
-      PHASE_A_HIGH_PWM_LOW_PWM
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_ENABLE
+      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
+      {
+        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_270;
+      }
       break;
 
       case 4:
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_DISABLE_LOW_DISABLE
-      PHASE_C_HIGH_DISABLE_LOW_DISABLE
+      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
+      {
+        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_330;
+      }
+      break;
 
-      PHASE_A_HIGH_DISABLE_LOW_DISABLE
-      PHASE_B_HIGH_PWM_LOW_PWM
-      PHASE_C_HIGH_DISABLE_LOW_ENABLE
+      case 6:
+      ui8_half_erps_flag = 1;
+
+      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
+      {
+        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_30;
+      }
+      break;
+
+      // BEMF is always 90 degrees advanced over motor rotor position degree zero
+      // and here (hall sensor C blue wire, signal transition from positive to negative),
+      // phase B BEMF is at max value (measured on osciloscope by rotating the motor)
+      case 2:
+      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
+      {
+        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_90;
+      }
       break;
 
       default:
       return;
       break;
     }
+
+    ui16_PWM_cycles_counter_6 = 1;
+  }
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // count number of fast loops / PWM cycles and reset some states when motor is near zero speed
+  if (ui16_PWM_cycles_counter < ((uint16_t) PWM_CYCLES_COUNTER_MAX))
+  {
+    ui16_PWM_cycles_counter++;
+    ui16_PWM_cycles_counter_6++;
+  }
+  else // happens when motor is stopped or near zero speed
+  {
+    ui16_PWM_cycles_counter = 1; // don't put to 0 to avoid 0 divisions
+    ui16_PWM_cycles_counter_6 = 1;
+    ui8_half_erps_flag = 0;
+    ui16_motor_speed_erps = 0;
+    ui16_PWM_cycles_counter_total = 0xffff;
+    ui8_angle_correction = 0;
+    ui8_motor_commutation_type = BLOCK_COMMUTATION;
+    ui8_hall_sensors_state_last = 0; // this way we force execution of hall sensors code next time
+//    ebike_app_cruise_control_stop ();
+//    if (ui8_ebike_app_state == EBIKE_APP_STATE_MOTOR_RUNNING) { ui8_ebike_app_state = EBIKE_APP_STATE_MOTOR_STOP; }
+  }
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // - calc interpolation angle and sinewave table index
+  // - read FOC Id current and ajust ui8_angle_correction
+#define DO_INTERPOLATION 1 // may be usefull to disable interpolation when debugging
+#if DO_INTERPOLATION == 1
+  // calculate the interpolation angle (and it doesn't work when motor starts and at very low speeds)
+  if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_60_DEGREES)
+  {
+    // division by 0: ui16_PWM_cycles_counter_total should never be 0
+    // TODO: verifiy if (ui16_PWM_cycles_counter_6 << 8) do not overflow
+    ui8_interpolation_angle = (ui16_PWM_cycles_counter_6 << 8) / ui16_PWM_cycles_counter_total; // this operations take 4.4us
+    ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
+    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_angle_correction;
+  }
+  else if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_360_DEGREES)
+  {
+    ui8_interpolation_angle = (ui16_PWM_cycles_counter << 8) / ui16_PWM_cycles_counter_total;
+    ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
+    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_angle_correction;
+  }
+  else
+#endif
+  {
+    ui8_sinewave_table_index = ui8_motor_rotor_absolute_angle + ui8_angle_correction;
   }
 
+  // we need to put phase voltage 90 degrees ahead of rotor position, to get current 90 degrees ahead and have max torque per amp
+  ui8_sinewave_table_index -= 63;
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // PWM duty_cycle controller:
+  // - limit battery undervoltage
+  // - limit battery max current
+  // - limit motor max current
+  // - limit motor max ERPS
+  // - ramp up/down PWM duty_cycle value
+
+//  if ((UI8_ADC_BATTERY_CURRENT > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
+//      (ui8_adc_motor_current > ui8_adc_target_motor_current_max) || // motor max current, reduce duty_cycle
+//      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
+//      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
+//  {
+//    if (ui8_duty_cycle > 0)
+//    {
+//      ui8_duty_cycle--;
+//    }
+//  }
+//  else // nothing to limit, so, adjust duty_cycle to duty_cycle_target, including ramping
+  {
+    if (ui8_duty_cycle_target > ui8_duty_cycle)
+    {
+      if (ui16_counter_duty_cycle_ramp_up++ >= ui16_duty_cycle_ramp_up_inverse_step)
+      {
+        ui16_counter_duty_cycle_ramp_up = 0;
+        ui8_duty_cycle++;
+      }
+    }
+    else if (ui8_duty_cycle_target < ui8_duty_cycle)
+    {
+      if (ui16_counter_duty_cycle_ramp_down++ >= ui16_duty_cycle_ramp_down_inverse_step)
+      {
+        ui16_counter_duty_cycle_ramp_down = 0;
+        ui8_duty_cycle--;
+      }
+    }
+  }
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // calc final PWM duty_cycle values to be applied to TIMER1
+
+  // scale and apply PWM duty_cycle for the 3 phases
+  // phase A is advanced 240 degrees over phase B
+  ui8_temp = ui8_svm_table [(uint8_t) (ui8_sinewave_table_index + 171 /* 240º */)];
+  if (ui8_temp > MIDDLE_PWM_DUTY_CYCLE_MAX)
+  {
+    ui16_value = ((uint16_t) (ui8_temp - MIDDLE_PWM_DUTY_CYCLE_MAX)) * ui8_duty_cycle;
+    ui8_temp = (uint8_t) (ui16_value >> 8);
+    ui8_phase_a_voltage = MIDDLE_PWM_DUTY_CYCLE_MAX + ui8_temp;
+  }
+  else
+  {
+    ui16_value = ((uint16_t) (MIDDLE_PWM_DUTY_CYCLE_MAX - ui8_temp)) * ui8_duty_cycle;
+    ui8_temp = (uint8_t) (ui16_value >> 8);
+    ui8_phase_a_voltage = MIDDLE_PWM_DUTY_CYCLE_MAX - ui8_temp;
+  }
+
+  // phase B as reference phase
+  ui8_temp = ui8_svm_table [ui8_sinewave_table_index];
+  if (ui8_temp > MIDDLE_PWM_DUTY_CYCLE_MAX)
+  {
+    ui16_value = ((uint16_t) (ui8_temp - MIDDLE_PWM_DUTY_CYCLE_MAX)) * ui8_duty_cycle;
+    ui8_temp = (uint8_t) (ui16_value >> 8);
+    ui8_phase_b_voltage = MIDDLE_PWM_DUTY_CYCLE_MAX + ui8_temp;
+  }
+  else
+  {
+    ui16_value = ((uint16_t) (MIDDLE_PWM_DUTY_CYCLE_MAX - ui8_temp)) * ui8_duty_cycle;
+    ui8_temp = (uint8_t) (ui16_value >> 8);
+    ui8_phase_b_voltage = MIDDLE_PWM_DUTY_CYCLE_MAX - ui8_temp;
+  }
+
+  // phase C is advanced 120 degrees over phase B
+  ui8_temp = ui8_svm_table [(uint8_t) (ui8_sinewave_table_index + 85 /* 120º */)];
+  if (ui8_temp > MIDDLE_PWM_DUTY_CYCLE_MAX)
+  {
+    ui16_value = ((uint16_t) (ui8_temp - MIDDLE_PWM_DUTY_CYCLE_MAX)) * ui8_duty_cycle;
+    ui8_temp = (uint8_t) (ui16_value >> 8);
+    ui8_phase_c_voltage = MIDDLE_PWM_DUTY_CYCLE_MAX + ui8_temp;
+  }
+  else
+  {
+    ui16_value = ((uint16_t) (MIDDLE_PWM_DUTY_CYCLE_MAX - ui8_temp)) * ui8_duty_cycle;
+    ui8_temp = (uint8_t) (ui16_value >> 8);
+    ui8_phase_c_voltage = MIDDLE_PWM_DUTY_CYCLE_MAX - ui8_temp;
+  }
+
+  // set final duty_cycle value
+  // phase A
+  TIM1->CCR3H = (uint8_t) (ui8_phase_a_voltage >> 7);
+  TIM1->CCR3L = (uint8_t) (ui8_phase_a_voltage << 1);
+  // phase B
+  TIM1->CCR2H = (uint8_t) (ui8_phase_b_voltage >> 7);
+  TIM1->CCR2L = (uint8_t) (ui8_phase_b_voltage << 1);
+  // phase C
+  TIM1->CCR1H = (uint8_t) (ui8_phase_c_voltage >> 7);
+  TIM1->CCR1L = (uint8_t) (ui8_phase_c_voltage << 1);
+
+  // enable PWM signals only when MOTOR_CONTROLLER_STATE_OK
+  if (ui8_motor_controller_state == MOTOR_CONTROLLER_STATE_OK)
+  {
+    TIM1->BKR |= TIM1_BKR_MOE;
+  }
+  /****************************************************************************/
+
+  /****************************************************************************/
+  // reload watchdog timer, every PWM cycle to avoid automatic reset of the microcontroller
+  if (ui8_first_time_run_flag)
+  { // from the init of watchdog up to first reset on PWM cycle interrupt,
+    // it can take up to 250ms and so we need to init here inside the PWM cycle
+    ui8_first_time_run_flag = 0;
+    watchdog_init ();
+  }
+  else
+  {
+    IWDG->KR = IWDG_KEY_REFRESH; // reload watch dog timer counter
+  }
+  /****************************************************************************/
+
+  /****************************************************************************/
   // clears the TIM1 interrupt TIM1_IT_UPDATE pending bit
   TIM1->SR1 = (uint8_t)(~(uint8_t)TIM1_IT_CC4);
+  /****************************************************************************/
+}
+
+void motor_disable_PWM (void)
+{
+  TIM1_CtrlPWMOutputs(DISABLE);
+}
+
+void motor_enable_PWM (void)
+{
+  TIM1_CtrlPWMOutputs(ENABLE);
+}
+
+void motor_controller_set_state (uint8_t ui8_state)
+{
+  ui8_motor_controller_state |= ui8_state;
+}
+
+void motor_controller_reset_state (uint8_t ui8_state)
+{
+  ui8_motor_controller_state &= ~ui8_state;
+}
+
+uint8_t motor_controller_state_is_set (uint8_t ui8_state)
+{
+  return ui8_motor_controller_state & ui8_state;
 }
 
 void hall_sensor_init (void)
@@ -163,6 +682,35 @@ void hall_sensor_init (void)
 
 void motor_init (void)
 {
+  motor_set_current_max (ADC_MOTOR_CURRENT_MAX);
+  motor_set_pwm_duty_cycle_ramp_up_inverse_step (PWM_DUTY_CYCLE_RAMP_UP_INVERSE_STEP); // each step = 64us
+  motor_set_pwm_duty_cycle_ramp_down_inverse_step (PWM_DUTY_CYCLE_RAMP_DOWN_INVERSE_STEP); // each step = 64us
+}
 
+void motor_set_pwm_duty_cycle_target (uint8_t ui8_value)
+{
+  if (ui8_value > PWM_DUTY_CYCLE_MAX) { ui8_value = PWM_DUTY_CYCLE_MAX; }
+
+  ui8_duty_cycle_target = ui8_value;
+}
+
+void motor_set_current_max (uint8_t ui8_value)
+{
+  ui8_adc_target_motor_current_max = ui8_adc_motor_current_offset + ui8_value;
+}
+
+void motor_set_pwm_duty_cycle_ramp_up_inverse_step (uint16_t ui16_value)
+{
+  ui16_duty_cycle_ramp_up_inverse_step = ui16_value;
+}
+
+void motor_set_pwm_duty_cycle_ramp_down_inverse_step (uint16_t ui16_value)
+{
+  ui16_duty_cycle_ramp_down_inverse_step = ui16_value;
+}
+
+uint16_t ui16_motor_get_motor_speed_erps (void)
+{
+  return ui16_motor_speed_erps;
 }
 

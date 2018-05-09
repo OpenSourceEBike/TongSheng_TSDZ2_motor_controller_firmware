@@ -13,7 +13,7 @@
 #include "stm8s_uart2.h"
 #include "main.h"
 
-void uart_init (void)
+void uart2_init (void)
 {
   UART2_DeInit();
 #ifdef DEBUG_UART

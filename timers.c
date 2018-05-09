@@ -30,3 +30,16 @@ void timer2_init (void)
   // IMPORTANT: this software delay is needed so timer2 work after this
   for(ui16_i = 0; ui16_i < (29000); ui16_i++) { ; }
 }
+
+void timer3_init (void)
+{
+  uint16_t ui16_i;
+
+  // TIM3 Peripheral Configuration
+  TIM3_DeInit();
+  TIM3_TimeBaseInit(TIM3_PRESCALER_16384, 0xffff); // each incremment at every ~1ms
+  TIM3_Cmd(ENABLE); // TIM3 counter enable
+
+  // IMPORTANT: this software delay is needed so timer3 work after this
+  for(ui16_i = 0; ui16_i < (29000); ui16_i++) { ; }
+}

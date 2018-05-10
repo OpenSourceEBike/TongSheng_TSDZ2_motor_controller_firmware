@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include "stm8s.h"
-#include "gpio.h"
+#include "pins.h"
 
 void pas_init (void)
 {

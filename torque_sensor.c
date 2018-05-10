@@ -8,9 +8,10 @@
 
 #include "stm8s.h"
 #include "stm8s_gpio.h"
-#include "gpio.h"
+#include "pins.h"
+#include "torque_sensor.h"
 
-void gpio_init (void)
+void torque_sensor_init (void)
 {
   GPIO_Init(TORQUE_SENSOR_EXCITATION__PORT,
 	    TORQUE_SENSOR_EXCITATION__PIN,

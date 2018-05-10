@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include "interrupts.h"
 #include "stm8s.h"
-#include "gpio.h"
+#include "pins.h"
 #include "uart.h"
 #include "pwm.h"
 #include "motor.h"
@@ -19,6 +19,8 @@
 #include "pas.h"
 #include "adc.h"
 #include "timers.h"
+#include "ebike_app.h"
+#include "torque_sensor.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //// Functions prototypes
@@ -45,7 +47,7 @@ int main (void);
 
 // PWM cycle interrupt
 void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER);
-void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTA_IRQHANDLER);
+void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTC_IRQHANDLER);
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,16 +61,16 @@ int main (void)
   //set clock at the max 16MHz
   CLK_HSIPrescalerConfig (CLK_PRESCALER_HSIDIV1);
 
-  gpio_init ();
   brake_init ();
   while (brake_is_set()) ; // hold here while brake is pressed -- this is a protection for development
   uart2_init ();
-  pwm_init_bipolar_4q ();
-  hall_sensor_init ();
-  motor_init ();
   timer2_init ();
   timer3_init ();
   adc_init ();
+  torque_sensor_init ();
+  hall_sensor_init ();
+  pwm_init_bipolar_4q ();
+  motor_init ();
   ebike_app_init ();
   enableInterrupts ();
 

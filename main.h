@@ -16,15 +16,13 @@
 // *************************************************************************** //
 // Throotle and PAS
 
-#define EBIKE_THROTTLE_TYPE_THROTTLE_PAS		1
-#define EBIKE_THROTTLE_TYPE_TORQUE_SENSOR		2
+#define EBIKE_THROTTLE_TYPE_TORQUE_SENSOR_AND_THROTTLE		1
+#define EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE              2
+#define EBIKE_THROTTLE_TYPE_THROTTLE_ONLY                 3
 // *************************************************************************** //
 
-#if defined (DO_SINEWAVE_INTERPOLATION_360_DEGREES)
-// This value is ERPS speed after which a transition happens from sinewave 60 degrees to have
-// interpolation 360 degrees and must be found experimentally but a value of 100 may be good
-#define MOTOR_ROTOR_ERPS_START_INTERPOLATION_360_DEGREES 100
-#endif
+#define LCD_TYPE_TSDZ2      1
+#define LCD_TYPE_KUNTENG    2
 
 #define PWM_CYCLES_COUNTER_MAX 3125 // 5 erps minimum speed; 1/5 = 200ms; 200ms/64us = 3125
 
@@ -59,18 +57,16 @@
 
 #define CRUISE_CONTROL_MIN      20
 
-// Max voltage value for throttle and torque sensor signals, in ADC 8 bits step
+// Max voltage value for throttle, in ADC 8 bits step
 // each ADC 8 bits step = (5V / 256) = 0.0195
-#if (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_THROTTLE_PAS)
 #define ADC_THROTTLE_MAX_VALUE 229
-#elif (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_TORQUE_SENSOR)
-#define ADC_THROTTLE_MAX_VALUE 183
-#endif
+#define ADC_TORQUE_SENSOR_MAX_VALUE 229
 
 // *************************************************************************** //
 // PAS
-#define PAS_DIRECTION_RIGHT 0
-#define PAS_DIRECTION_LEFT 1
+#define PAS_NUMBER_MAGNETS  24
+
+#define PAS_THRESHOLD 1.7
 
 // (1/(150RPM/60)) / (PAS_NUMBER_MAGNETS * 0.000064)
 #define PAS_ABSOLUTE_MAX_CADENCE_PWM_CYCLE_TICKS  (6250 / PAS_NUMBER_MAGNETS) // max hard limit to 150RPM PAS cadence

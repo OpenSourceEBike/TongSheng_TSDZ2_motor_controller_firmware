@@ -6,10 +6,9 @@
  * Released under the GPL License, Version 3
  */
 
-#ifndef _GPIO_H_
-#define _GPIO_H_
+#ifndef _PINS_H_
+#define _PINS_H_
 
-#include "main.h"
 #include "stm8s_gpio.h"
 
 /* Connections:
@@ -100,6 +99,4 @@
 #define BATTERY_CURRENT__PORT     GPIOB
 #define BATTERY_CURRENT__PIN      GPIO_PIN_5
 
-void gpio_init (void);
-
-#endif /* GPIO_H_ */
+#endif /* _PINS_H_ */

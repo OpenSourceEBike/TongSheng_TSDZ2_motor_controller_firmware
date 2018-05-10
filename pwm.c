@@ -11,7 +11,7 @@
 #include "stm8s_tim1.h"
 #include "interrupts.h"
 #include "pwm.h"
-#include "gpio.h"
+#include "pins.h"
 
 void pwm_init_bipolar_4q (void)
 {

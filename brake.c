@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include "stm8s.h"
 #include "stm8s_it.h"
-#include "gpio.h"
+#include "pins.h"
 #include "main.h"
 #include "interrupts.h"
 #include "brake.h"

@@ -14,7 +14,7 @@
 #include "stm8s_tim1.h"
 #include "motor.h"
 #include "ebike_app.h"
-#include "gpio.h"
+#include "pins.h"
 #include "pwm.h"
 #include "config.h"
 #include "adc.h"
@@ -303,11 +303,6 @@ volatile uint8_t ui8_motor_controller_state = MOTOR_CONTROLLER_STATE_OK;
 uint8_t ui8_hall_sensors_state = 0;
 uint8_t ui8_hall_sensors_state_last = 0;
 
-volatile uint8_t ui8_adc_target_motor_current_max;
-
-volatile uint8_t ui8_adc_motor_current;
-uint8_t ui8_adc_motor_current_offset;
-
 uint8_t ui8_half_erps_flag = 0;
 
 volatile uint8_t ui8_duty_cycle = 0;
@@ -334,21 +329,8 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   uint8_t ui8_temp;
 
   /****************************************************************************/
-  // read motor current ADC value
-  // disable scan mode
-  ADC1->CR2 &= (uint8_t)(~ADC1_CR2_SCAN);
-  // clear EOC flag first (selected also channel 6)
-  ADC1->CSR = 0x06;
-  // start ADC1 conversion
-  ADC1->CR1 |= ADC1_CR1_ADON;
-  while (!(ADC1->CSR & ADC1_FLAG_EOC)) ;
-  ui8_adc_motor_current = ADC1->DRH;
-  /****************************************************************************/
-
-  /****************************************************************************/
   // trigger ADC conversion of all channels (scan conversion, buffered)
-  ADC1->CR2 |= ADC1_CR2_SCAN; // enable scan mode
-  ADC1->CSR = 0x09; // clear EOC flag first (selected also channel 9)
+  ADC1->CSR = 0x07; // clear EOC flag first (selected also channel 7)
   ADC1->CR1 |= ADC1_CR1_ADON; // start ADC1 conversion
   /****************************************************************************/
 
@@ -526,21 +508,19 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // PWM duty_cycle controller:
   // - limit battery undervoltage
   // - limit battery max current
-  // - limit motor max current
   // - limit motor max ERPS
   // - ramp up/down PWM duty_cycle value
 
-//  if ((UI8_ADC_BATTERY_CURRENT > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
-//      (ui8_adc_motor_current > ui8_adc_target_motor_current_max) || // motor max current, reduce duty_cycle
-//      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
-//      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
-//  {
-//    if (ui8_duty_cycle > 0)
-//    {
-//      ui8_duty_cycle--;
-//    }
-//  }
-//  else // nothing to limit, so, adjust duty_cycle to duty_cycle_target, including ramping
+  if ((UI8_ADC_BATTERY_CURRENT > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
+      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
+      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
+  {
+    if (ui8_duty_cycle > 0)
+    {
+      ui8_duty_cycle--;
+    }
+  }
+  else // nothing to limit, so, adjust duty_cycle to duty_cycle_target, including ramping
   {
     if (ui8_duty_cycle_target > ui8_duty_cycle)
     {
@@ -682,7 +662,6 @@ void hall_sensor_init (void)
 
 void motor_init (void)
 {
-  motor_set_current_max (ADC_MOTOR_CURRENT_MAX);
   motor_set_pwm_duty_cycle_ramp_up_inverse_step (PWM_DUTY_CYCLE_RAMP_UP_INVERSE_STEP); // each step = 64us
   motor_set_pwm_duty_cycle_ramp_down_inverse_step (PWM_DUTY_CYCLE_RAMP_DOWN_INVERSE_STEP); // each step = 64us
 }
@@ -692,11 +671,6 @@ void motor_set_pwm_duty_cycle_target (uint8_t ui8_value)
   if (ui8_value > PWM_DUTY_CYCLE_MAX) { ui8_value = PWM_DUTY_CYCLE_MAX; }
 
   ui8_duty_cycle_target = ui8_value;
-}
-
-void motor_set_current_max (uint8_t ui8_value)
-{
-  ui8_adc_target_motor_current_max = ui8_adc_motor_current_offset + ui8_value;
 }
 
 void motor_set_pwm_duty_cycle_ramp_up_inverse_step (uint16_t ui16_value)

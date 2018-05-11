@@ -32,11 +32,11 @@ volatile uint8_t ui8_ebike_app_state = EBIKE_APP_STATE_MOTOR_STOP;
 volatile uint8_t ui8_adc_target_battery_current_max;
 
 // function prototypes
-static void throttle_value_remove_offset (uint8_t *ui8_p_throttle_value);
+void throttle_value_remove_offset (uint8_t *ui8_p_throttle_value);
 static void ebike_control_motor (void);
 void ebike_app_battery_set_current_max (uint8_t ui8_value);
 
-static void throttle_value_remove_offset (uint8_t *ui8_p_throttle_value)
+void throttle_value_remove_offset (uint8_t *ui8_p_throttle_value)
 {
   uint8_t ui8_temp;
 
@@ -93,9 +93,10 @@ f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.0);
 
   ui8_temp = (uint8_t) (map ((uint32_t) f_temp,
          (uint32_t) 0,
-         (uint32_t) 255,
+         (uint32_t) ADC_THROTTLE_MAX_VALUE,
          (uint32_t) 0,
          (uint32_t) 255));
+
   motor_set_pwm_duty_cycle_target (ui8_temp);
 #endif
 }

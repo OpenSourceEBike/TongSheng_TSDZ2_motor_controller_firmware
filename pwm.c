@@ -21,7 +21,6 @@ void pwm_init_bipolar_4q (void)
         //(BUT PWM center aligned mode needs twice the frequency)
         1); // will fire the TIM1_IT_UPDATE at every PWM period cycle
 
-
 //#define DISABLE_PWM_CHANNELS_1_3
 
   TIM1_OC1Init(TIM1_OCMODE_PWM1,
@@ -34,7 +33,7 @@ void pwm_init_bipolar_4q (void)
 #endif
          255, // initial duty_cycle value
          TIM1_OCPOLARITY_HIGH,
-         TIM1_OCNPOLARITY_LOW,
+         TIM1_OCPOLARITY_HIGH,
          TIM1_OCIDLESTATE_RESET,
          TIM1_OCNIDLESTATE_SET);
 
@@ -43,7 +42,7 @@ void pwm_init_bipolar_4q (void)
          TIM1_OUTPUTNSTATE_ENABLE,
          255, // initial duty_cycle value
          TIM1_OCPOLARITY_HIGH,
-         TIM1_OCNPOLARITY_LOW,
+         TIM1_OCPOLARITY_HIGH,
          TIM1_OCIDLESTATE_RESET,
          TIM1_OCIDLESTATE_SET);
 
@@ -57,7 +56,7 @@ void pwm_init_bipolar_4q (void)
 #endif
          255, // initial duty_cycle value
          TIM1_OCPOLARITY_HIGH,
-         TIM1_OCNPOLARITY_LOW,
+         TIM1_OCPOLARITY_HIGH,
          TIM1_OCIDLESTATE_RESET,
          TIM1_OCNIDLESTATE_SET);
 

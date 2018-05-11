@@ -511,17 +511,17 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // - limit motor max ERPS
   // - ramp up/down PWM duty_cycle value
 
-  if ((UI8_ADC_BATTERY_CURRENT > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
-      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
-      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
-  {
-    if (ui8_duty_cycle > 0)
-    {
-      ui8_duty_cycle--;
-    }
-  }
-  else // nothing to limit, so, adjust duty_cycle to duty_cycle_target, including ramping
-  {
+//  if ((UI8_ADC_BATTERY_CURRENT > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
+//      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
+//      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
+//  {
+//    if (ui8_duty_cycle > 0)
+//    {
+//      ui8_duty_cycle--;
+//    }
+//  }
+//  else // nothing to limit, so, adjust duty_cycle to duty_cycle_target, including ramping
+//  {
     if (ui8_duty_cycle_target > ui8_duty_cycle)
     {
       if (ui16_counter_duty_cycle_ramp_up++ >= ui16_duty_cycle_ramp_up_inverse_step)
@@ -538,7 +538,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
         ui8_duty_cycle--;
       }
     }
-  }
+//  }
   /****************************************************************************/
 
   /****************************************************************************/
@@ -592,14 +592,14 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 
   // set final duty_cycle value
   // phase A
-  TIM1->CCR3H = (uint8_t) (ui8_phase_a_voltage >> 7);
-  TIM1->CCR3L = (uint8_t) (ui8_phase_a_voltage << 1);
+  TIM1->CCR3H = (uint8_t) (ui8_phase_c_voltage >> 7);
+  TIM1->CCR3L = (uint8_t) (ui8_phase_c_voltage << 1);
   // phase B
   TIM1->CCR2H = (uint8_t) (ui8_phase_b_voltage >> 7);
   TIM1->CCR2L = (uint8_t) (ui8_phase_b_voltage << 1);
   // phase C
-  TIM1->CCR1H = (uint8_t) (ui8_phase_c_voltage >> 7);
-  TIM1->CCR1L = (uint8_t) (ui8_phase_c_voltage << 1);
+  TIM1->CCR1H = (uint8_t) (ui8_phase_a_voltage >> 7);
+  TIM1->CCR1L = (uint8_t) (ui8_phase_a_voltage << 1);
 
   // enable PWM signals only when MOTOR_CONTROLLER_STATE_OK
   if (ui8_motor_controller_state == MOTOR_CONTROLLER_STATE_OK)

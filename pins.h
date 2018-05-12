@@ -17,11 +17,20 @@
  * Motor PHASE_B: green wire
  * Motor PHASE_C: yellow wire
  *
+ * The battery_current is measured using the LM385 opamp in an non inverting configuration. The pin 1 is the output and has a low pass filter.
+ * The pin 3 (+) has the signal input and pin 2 (-) has the feedback loop, composed of R1 = 11k and R2 = 1k.
+ * The gain is: (R1 / R2) + 1 = (11k / 1k) + 1 = 12.
+ * We know that 1 Amp of battery current is equal to 14 ADC 8 bits steps, so 1 Amp = (5V / 255) * 14 = 0.275V.
+ * Each 1 Amp at the shunt is then 0.275V / 12 = 0.023V. This also means shunt should has 0.023 ohms resistance.
+ * Since there is a transistor that has a base resistor connected throught a 1K resisitor to the shunt voltage, and also the base has
+ * another connected resistor of 27K, I think the transistor will switch on at arround 0.5V on the shunt voltage and that means arround 22 amps.
+ * The microcontroller should read the turned on transistor signal on PD0, to detect the battery_over_current of 22 amps.
  *
  * PIN                | IN/OUT|Function
  * ----------------------------------------------------------
- * PB5  (ADC_AIN5)    | in  | battery_current (14 ADC bits step per 1 amp)
- * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116;)
+ * PD0                | in  | battery_over_current
+ * PB5  (ADC_AIN5)    | in  | battery_current (14 ADC bits step per 1 amp; this signal amplified by the opamp 358)
+ * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116; this signal atenuated by the opamp 358)
  *
  * PE5                | in  | Hall_sensor_A
  * PD2                | in  | Hall_sensor_B
@@ -35,7 +44,7 @@
  * PC1  (TIM1_CH1)    | out | PWM_phase_C_high
  *
  * PD5  (UART2_TX)    | out | usart_tx
- * PD6  (UART2_RX)    | out | usart_rx
+ * PD6  (UART2_RX)    | in | usart_rx
  *
  * PC6                | in  | brake
  * PB7  (ADC_AIN7)    | in  | throttle
@@ -45,6 +54,7 @@
  *
  * PD3                | out | torque sensor excitation
  * PB3  (ADC_AIN3)    | in  | torque sensor
+ * PD4                | out | enable/disable 5V output of the circuit, meaning it can turn off all the system including the microcontroller itself
  *
  */
 

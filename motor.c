@@ -353,10 +353,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     switch (ui8_hall_sensors_state)
     {
       case 3:
-      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
-      {
-        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_150;
-      }
+      ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_150;
       break;
 
       case 1:
@@ -372,22 +369,6 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
         else { ui16_motor_speed_erps = ((uint16_t) PWM_CYCLES_SECOND); }
 
         // update motor commutation state based on motor speed
-#ifdef DO_SINEWAVE_INTERPOLATION_360_DEGREES
-        if (ui16_motor_speed_erps > MOTOR_ROTOR_ERPS_START_INTERPOLATION_360_DEGREES)
-        {
-          if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_60_DEGREES)
-          {
-            ui8_motor_commutation_type = SINEWAVE_INTERPOLATION_360_DEGREES;
-          }
-        }
-        else
-        {
-          if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_360_DEGREES)
-          {
-            ui8_motor_commutation_type = SINEWAVE_INTERPOLATION_60_DEGREES;
-          }
-        }
-#endif
         if (ui16_motor_speed_erps > MOTOR_ROTOR_ERPS_START_INTERPOLATION_60_DEGREES)
         {
           if (ui8_motor_commutation_type == BLOCK_COMMUTATION)
@@ -410,37 +391,24 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
       break;
 
       case 5:
-
-      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
-      {
-        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_270;
-      }
+      ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_270;
       break;
 
       case 4:
-      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
-      {
-        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_330;
-      }
+      ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_330;
       break;
 
       case 6:
       ui8_half_erps_flag = 1;
 
-      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
-      {
-        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_30;
-      }
+      ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_30;
       break;
 
       // BEMF is always 90 degrees advanced over motor rotor position degree zero
       // and here (hall sensor C blue wire, signal transition from positive to negative),
       // phase B BEMF is at max value (measured on osciloscope by rotating the motor)
       case 2:
-      if (ui8_motor_commutation_type != SINEWAVE_INTERPOLATION_360_DEGREES)
-      {
-        ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_90;
-      }
+      ui8_motor_rotor_absolute_angle = (uint8_t) MOTOR_ROTOR_ANGLE_90;
       break;
 
       default:
@@ -476,7 +444,6 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 
   /****************************************************************************/
   // - calc interpolation angle and sinewave table index
-  // - read FOC Id current and ajust ui8_angle_correction
 #define DO_INTERPOLATION 1 // may be usefull to disable interpolation when debugging
 #if DO_INTERPOLATION == 1
   // calculate the interpolation angle (and it doesn't work when motor starts and at very low speeds)
@@ -485,12 +452,6 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     // division by 0: ui16_PWM_cycles_counter_total should never be 0
     // TODO: verifiy if (ui16_PWM_cycles_counter_6 << 8) do not overflow
     ui8_interpolation_angle = (ui16_PWM_cycles_counter_6 << 8) / ui16_PWM_cycles_counter_total; // this operations take 4.4us
-    ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
-    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_angle_correction;
-  }
-  else if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_360_DEGREES)
-  {
-    ui8_interpolation_angle = (ui16_PWM_cycles_counter << 8) / ui16_PWM_cycles_counter_total;
     ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
     ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_angle_correction;
   }
@@ -591,13 +552,13 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   }
 
   // set final duty_cycle value
-  // phase A
-  TIM1->CCR3H = (uint8_t) (ui8_phase_c_voltage >> 7);
-  TIM1->CCR3L = (uint8_t) (ui8_phase_c_voltage << 1);
   // phase B
-  TIM1->CCR2H = (uint8_t) (ui8_phase_b_voltage >> 7);
-  TIM1->CCR2L = (uint8_t) (ui8_phase_b_voltage << 1);
+  TIM1->CCR3H = (uint8_t) (ui8_phase_b_voltage >> 7);
+  TIM1->CCR3L = (uint8_t) (ui8_phase_b_voltage << 1);
   // phase C
+  TIM1->CCR2H = (uint8_t) (ui8_phase_c_voltage >> 7);
+  TIM1->CCR2L = (uint8_t) (ui8_phase_c_voltage << 1);
+  // phase A
   TIM1->CCR1H = (uint8_t) (ui8_phase_a_voltage >> 7);
   TIM1->CCR1L = (uint8_t) (ui8_phase_a_voltage << 1);
 

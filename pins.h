@@ -29,6 +29,7 @@
  * PIN                | IN/OUT|Function
  * ----------------------------------------------------------
  * PD0                | in  | battery_over_current
+ * PB4  (ADC_AIN4)    | in  | (!!! seems it is the torque sensor signal, this signal is amplified by the opamp)
  * PB5  (ADC_AIN5)    | in  | battery_current (14 ADC bits step per 1 amp; this signal amplified by the opamp 358)
  * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116; this signal atenuated by the opamp 358)
  *
@@ -44,7 +45,7 @@
  * PC1  (TIM1_CH1)    | out | PWM_phase_C_high
  *
  * PD5  (UART2_TX)    | out | usart_tx
- * PD6  (UART2_RX)    | in | usart_rx
+ * PD6  (UART2_RX)    | in  | usart_rx
  *
  * PC6                | in  | brake
  * PB7  (ADC_AIN7)    | in  | throttle
@@ -55,6 +56,8 @@
  * PD3                | out | torque sensor excitation
  * PB3  (ADC_AIN3)    | in  | torque sensor
  * PD4                | out | enable/disable 5V output of the circuit, meaning it can turn off all the system including the microcontroller itself
+ *
+ * PE6  (ADC_AIN9)    | in  | this signal goes to a pad of a resistor that is not assembled. If was assembled, it would measure the opamp output value related to AIN4.
  *
  */
 

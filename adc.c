@@ -92,3 +92,25 @@ static void adc_trigger (void)
   ADC1->CSR &= 0x07; // clear EOC flag first (selected also channel 7)
   ADC1->CR1 |= ADC1_CR1_ADON; // Start ADC1 conversion
 }
+
+uint16_t ui16_adc_read_battery_current_10b (void)
+{
+  uint16_t temph;
+  uint8_t templ;
+
+  templ = *(uint8_t*)(0x53EB);
+  temph = *(uint8_t*)(0x53EA);
+
+  return ((uint16_t) temph) << 2 | ((uint16_t) templ);
+}
+
+uint16_t ui16_adc_read_battery_voltage_10b (void)
+{
+  uint16_t temph;
+  uint8_t templ;
+
+  templ = *(uint8_t*)(0x53ED);
+  temph = *(uint8_t*)(0x53EC);
+
+  return ((uint16_t) temph) << 2 | ((uint16_t) templ);
+}

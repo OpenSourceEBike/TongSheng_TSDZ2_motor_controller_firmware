@@ -11,7 +11,7 @@
 
 //#include "config.h"
 
-//#define DEBUG_UART
+#define DEBUG_UART
 
 // *************************************************************************** //
 // Throotle and PAS
@@ -95,11 +95,12 @@
 // BATTERY
 
 // ADC Battery voltage
-// 29.8V --> 110 (8bits ADC)
-// 22.1V --> 81 (8bits ADC)
-// 1 ADC step 8 bits --> 0.287 volts
-#define ADC_BATTERY_VOLTAGE_PER_ADC_STEP 0.2652 // S06S controller | this value was found experimentaly, to beter represent the real value
-#define ADC_BATTERY_VOLTAGE_K 68
+// 0.0862 per ADC_10bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116; this signal atenuated by the opamp 358
+#define ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512 44
+
+// ADC Battery current
+// 1A per 5 steps of ADC_10bits
+#define ADC_BATTERY_CURRENT_PER_ADC_STEP_X512 102
 
 #define COMMUNICATIONS_BATTERY_VOLTAGE  (uint8_t) (((float) BATTERY_LI_ION_CELLS_NUMBER) * 3.45) // example: 7S battery, should be = 24
 #define ADC_BATTERY_VOLTAGE_MAX   (uint8_t) ((float) (BATTERY_LI_ION_CELLS_NUMBER * LI_ION_CELL_VOLTS_MAX) / ADC_BATTERY_VOLTAGE_PER_ADC_STEP)
@@ -117,7 +118,7 @@
 // Possible values: 0, 1, 2, 3, 4, 5, 6
 // 0 equal to no filtering and no delay, higher values will increase filtering but will also add bigger delay
 #define READ_BATTERY_CURRENT_FILTER_COEFFICIENT 3
-#define READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT 5
+#define READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT 3
 // *************************************************************************** //
 
 #endif // _MAIN_H_

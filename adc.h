@@ -18,5 +18,7 @@
 #define UI8_ADC_TORQUE_SENSOR         (*(uint8_t*)(0x53E6)) // AIN3
 
 void adc_init (void);
+uint16_t ui16_adc_read_battery_current_10b (void);
+uint16_t ui16_adc_read_battery_voltage_10b (void);
 
 #endif /* _ADC_H */

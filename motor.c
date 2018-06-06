@@ -22,6 +22,7 @@
 #include "uart.h"
 #include "adc.h"
 #include "watchdog.h"
+#include "math.h"
 
 #define SVM_TABLE_LEN 256
 
@@ -317,6 +318,103 @@ uint8_t ui8_phase_c_voltage;
 uint16_t ui16_value;
 
 uint8_t ui8_first_time_run_flag = 1;
+
+uint16_t ui16_adc_battery_voltage_accumulated = 0;
+uint16_t ui16_adc_battery_voltage_filtered;
+
+uint16_t ui16_adc_battery_current_accumulated = 0;
+uint16_t ui16_adc_battery_current_filtered;
+
+void read_battery_voltage (void);
+void read_battery_current (void);
+
+void motor_controller (void)
+{
+  uint8_t ui8_temp;
+  static uint16_t ui16_temp;
+  static uint32_t ui32_temp;
+  uint16_t ui16_e_phase_voltage_x512;
+  uint16_t ui16_e_phase_voltage;
+  static uint16_t ui16_i_phase_current_x2;
+  static uint32_t ui32_i_phase_current_x2;
+  static uint32_t ui32_l_x1000000;
+  uint16_t ui16_i_phase_current;
+  static uint16_t ui16_w_angular_velocity_x10;
+  static uint32_t ui32_w_angular_velocity_x10;
+  uint16_t ui16_w_angular_velocity;
+  uint16_t ui16_iwl;
+  uint16_t ui16_battery_voltage_filtered;
+  uint16_t ui16_battery_current_filtered;
+
+  float f_temp;
+
+  // reads battery voltage and current
+  read_battery_voltage ();
+  read_battery_current ();
+
+  // E phase voltage
+  ui16_temp = ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+  ui16_e_phase_voltage_x512 = (ui16_temp >> 8) * ui8_duty_cycle;
+  ui16_e_phase_voltage = ui16_e_phase_voltage_x512 >> 9;
+
+  // I phase current
+  if (ui8_duty_cycle > 10)
+  {
+   ui16_temp = ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512;
+   ui16_i_phase_current_x2 = ui16_temp / ui8_duty_cycle;
+  }
+  else
+  {
+   ui16_i_phase_current_x2 = 0;
+  }
+  ui16_i_phase_current = ui16_i_phase_current_x2 >> 1;
+
+  // W angular velocity
+  ui16_w_angular_velocity_x10 = ui16_motor_speed_erps * 63;
+  ui16_w_angular_velocity = ui16_w_angular_velocity_x10 / 10;
+
+  // 36V motor: L = 76uH
+  // 48V motor: L = 135uH
+  // IwL
+//  ui32_temp = (uint32_t) ui16_i_phase_current_x2 * ui16_w_angular_velocity_x10 * 76;
+  ui32_w_angular_velocity_x10 = ui16_w_angular_velocity_x10;
+  ui32_i_phase_current_x2 = ui16_i_phase_current_x2;
+  ui32_l_x1000000 = 135;
+
+  ui32_temp = ui32_w_angular_velocity_x10 * ui32_l_x1000000;
+  ui32_temp *= ui32_i_phase_current_x2;
+  ui16_iwl = (ui32_temp / 2000000);
+
+  ui16_battery_voltage_filtered = (ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512) >> 9;
+  ui16_battery_current_filtered = (ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512) >> 9;
+
+  f_temp = asinf((float) ui16_iwl / (float) ui16_e_phase_voltage) * 5732.0;
+  ui16_temp = f_temp;
+
+  printf ("%d,%d,%d,%d\n",
+          ui16_e_phase_voltage,
+          ui16_i_phase_current,
+          ui16_motor_speed_erps,
+          ui16_temp/100);
+
+  ui8_angle_correction = - (ui16_temp/100);
+
+//  printf ("%d,%d,%d,%d\n",
+//          ui16_e_phase_voltage,
+//          ui16_i_phase_current,
+//          ui16_w_angular_velocity_x10,
+//          ui8_angle_correction);
+
+  if (UART2_GetFlagStatus(UART2_FLAG_RXNE) != RESET)
+    {
+  ui8_temp = getchar ();
+  if (ui8_temp == '1')
+    ui8_angle_correction++;
+  if (ui8_temp == '0')
+    ui8_angle_correction--;
+    }
+}
+
 
 // Measures did with a 24V Q85 328 RPM motor, rotating motor backwards by hand:
 // Hall sensor A positivie to negative transition | BEMF phase B at max value / top of sinewave
@@ -649,3 +747,20 @@ uint16_t ui16_motor_get_motor_speed_erps (void)
   return ui16_motor_speed_erps;
 }
 
+void read_battery_voltage (void)
+{
+  // low pass filter the voltage readed value, to avoid possible fast spikes/noise
+  ui16_adc_battery_voltage_accumulated -= ui16_adc_battery_voltage_accumulated >> READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT;
+  ui16_adc_battery_voltage_accumulated += ui16_adc_read_battery_voltage_10b ();
+  ui16_adc_battery_voltage_filtered = ui16_adc_battery_voltage_accumulated >> READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT;
+}
+
+void read_battery_current (void)
+{
+  int16_t i16_battery_current;
+
+  // low pass filter the positive battery readed value (no regen current), to avoid possible fast spikes/noise
+  ui16_adc_battery_current_accumulated -= ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
+  ui16_adc_battery_current_accumulated += ui16_adc_read_battery_current_10b ();
+  ui16_adc_battery_current_filtered = ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
+}

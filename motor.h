@@ -22,6 +22,9 @@
 #define MOTOR_CONTROLLER_STATE_THROTTLE_ERROR		16
 #define MOTOR_CONTROLLER_STATE_MOTOR_BLOCKED		32
 
+extern volatile uint8_t ui8_duty_cycle;
+extern volatile uint16_t ui16_motor_speed_erps;
+
 /***************************************************************************************/
 // Motor interface
 void hall_sensor_init (void); // must be called before using the motor
@@ -37,6 +40,7 @@ void motor_controller_set_state (uint8_t state);
 void motor_controller_reset_state (uint8_t state);
 uint8_t motor_controller_state_is_set (uint8_t state);
 void motor_set_pwm_duty_cycle_target (uint8_t ui8_value);
+void motor_controller (void);
 /***************************************************************************************/
 
 #endif /* _MOTOR_H_ */

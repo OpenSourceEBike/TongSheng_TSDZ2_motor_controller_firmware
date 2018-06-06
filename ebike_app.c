@@ -105,3 +105,4 @@ void ebike_app_battery_set_current_max (uint8_t ui8_value)
 {
   ui8_adc_target_battery_current_max = ui8_adc_battery_current_offset + ui8_value;
 }
+

@@ -56,6 +56,7 @@ int main (void)
 {
   uint16_t ui16_TIM3_counter = 0;
   uint16_t ui16_ebike_app_controller_counter = 0;
+  uint16_t ui16_motor_controller_counter = 0;
   uint16_t ui16_debug_uart_counter = 0;
 
   //set clock at the max 16MHz
@@ -79,6 +80,14 @@ int main (void)
     // because of continue; at the end of each if code block that will stop the while (1) loop there,
     // the first if block code will have the higher priority over any others
     ui16_TIM3_counter = TIM3_GetCounter ();
+    if ((ui16_TIM3_counter - ui16_motor_controller_counter) > 5) // every 100ms
+    {
+      ui16_motor_controller_counter = ui16_TIM3_counter;
+      motor_controller ();
+      continue;
+    }
+
+    ui16_TIM3_counter = TIM3_GetCounter ();
     if ((ui16_TIM3_counter - ui16_ebike_app_controller_counter) > 100) // every 100ms
     {
       ui16_ebike_app_controller_counter = ui16_TIM3_counter;
@@ -88,16 +97,16 @@ int main (void)
 
 #ifdef DEBUG_UART
     ui16_TIM3_counter = TIM3_GetCounter ();
-    if ((ui16_TIM3_counter - ui16_debug_uart_counter) > 20) // every 20ms
+    if ((ui16_TIM3_counter - ui16_debug_uart_counter) > 50)
     {
       ui16_debug_uart_counter = ui16_TIM3_counter;
 
       // sugestion: no more than 6 variables printed (takes about 3ms to printf 6 variables)
-      printf ("%d,%d,%d,%d\n",
-        ui16_motor_get_motor_speed_erps(),
-        ui8_duty_cycle,
-        UI8_ADC_BATTERY_CURRENT,
-        ui8_angle_correction);
+//      printf ("%d,%d,%d,%d\n",
+//        ui16_motor_get_motor_speed_erps(),
+//        ui8_duty_cycle,
+//        UI8_ADC_BATTERY_CURRENT,
+//        ui8_angle_correction);
       continue;
     }
 #endif

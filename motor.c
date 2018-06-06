@@ -325,6 +325,9 @@ uint16_t ui16_adc_battery_voltage_filtered;
 uint16_t ui16_adc_battery_current_accumulated = 0;
 uint16_t ui16_adc_battery_current_filtered;
 
+uint16_t ui16_angle_acc = 0;
+uint16_t ui16_angle_filt;
+
 void read_battery_voltage (void);
 void read_battery_current (void);
 
@@ -391,13 +394,17 @@ void motor_controller (void)
   f_temp = asinf((float) ui16_iwl / (float) ui16_e_phase_voltage) * 5732.0;
   ui16_temp = f_temp;
 
+  ui16_angle_acc -= ui16_angle_acc >> 6;
+  ui16_angle_acc += ui16_temp;
+  ui16_angle_filt = ui16_angle_acc >> 6;
+
   printf ("%d,%d,%d,%d\n",
           ui16_e_phase_voltage,
           ui16_i_phase_current,
           ui16_motor_speed_erps,
-          ui16_temp/100);
+          ui16_angle_filt/100);
 
-  ui8_angle_correction = - (ui16_temp/100);
+  ui8_angle_correction =  (ui16_angle_filt/100);
 
 //  printf ("%d,%d,%d,%d\n",
 //          ui16_e_phase_voltage,

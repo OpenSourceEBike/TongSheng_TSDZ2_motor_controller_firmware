@@ -102,11 +102,12 @@ int main (void)
       ui16_debug_uart_counter = ui16_TIM3_counter;
 
       // sugestion: no more than 6 variables printed (takes about 3ms to printf 6 variables)
-//      printf ("%d,%d,%d,%d\n",
-//        ui16_motor_get_motor_speed_erps(),
-//        ui8_duty_cycle,
-//        UI8_ADC_BATTERY_CURRENT,
-//        ui8_angle_correction);
+      printf ("%d,%d,%d,%d,%d\n",
+        ui16_motor_get_motor_speed_erps(),
+        ui8_duty_cycle_target,
+        ui8_duty_cycle,
+        UI8_ADC_BATTERY_CURRENT,
+        ui8_adc_motor_phase_current);
       continue;
     }
 #endif

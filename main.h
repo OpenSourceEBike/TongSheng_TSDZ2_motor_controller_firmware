@@ -59,7 +59,7 @@
 
 // Max voltage value for throttle, in ADC 8 bits step
 // each ADC 8 bits step = (5V / 256) = 0.0195
-#define ADC_THROTTLE_MAX_VALUE 229
+#define ADC_THROTTLE_MAX_VALUE 200
 #define ADC_TORQUE_SENSOR_MAX_VALUE 229
 
 // *************************************************************************** //

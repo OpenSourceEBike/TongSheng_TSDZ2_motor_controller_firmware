@@ -13,6 +13,7 @@
 #include "stm8s_adc1.h"
 #include "adc.h"
 #include "ebike_app.h"
+#include "motor.h"
 
 static void adc_trigger (void);
 
@@ -58,6 +59,7 @@ void adc_init (void)
   }
   ui16_adc_battery_current_offset >>= 4;
   ui8_adc_battery_current_offset = ui16_adc_battery_current_offset >> 2;
+  ui8_adc_motor_phase_current_offset = ui8_adc_battery_current_offset;
 
   // read and average a few values of ADC throttle
   ui16_adc_throttle_offset = 0;

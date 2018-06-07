@@ -22,8 +22,12 @@
 #define MOTOR_CONTROLLER_STATE_THROTTLE_ERROR		16
 #define MOTOR_CONTROLLER_STATE_MOTOR_BLOCKED		32
 
+extern volatile uint8_t ui8_duty_cycle_target;
 extern volatile uint8_t ui8_duty_cycle;
 extern volatile uint16_t ui16_motor_speed_erps;
+extern volatile uint8_t ui8_adc_motor_phase_current_offset;
+extern volatile uint8_t ui8_foc_angle_correction;
+extern volatile uint8_t ui8_adc_motor_phase_current;
 
 /***************************************************************************************/
 // Motor interface

@@ -80,7 +80,7 @@ int main (void)
     // because of continue; at the end of each if code block that will stop the while (1) loop there,
     // the first if block code will have the higher priority over any others
     ui16_TIM3_counter = TIM3_GetCounter ();
-    if ((ui16_TIM3_counter - ui16_motor_controller_counter) > 5) // every 100ms
+    if ((ui16_TIM3_counter - ui16_motor_controller_counter) > 4) // every 4ms
     {
       ui16_motor_controller_counter = ui16_TIM3_counter;
       motor_controller ();

@@ -25,6 +25,7 @@
 #include "math.h"
 
 #define SVM_TABLE_LEN 256
+#define SIN_TABLE_LEN 60
 
 uint8_t ui8_svm_table [SVM_TABLE_LEN] =
 {
@@ -286,6 +287,70 @@ uint8_t ui8_svm_table [SVM_TABLE_LEN] =
     238 ,
 };
 
+uint8_t ui8_sin_table [SVM_TABLE_LEN] =
+{
+    0 ,
+    3 ,
+    6 ,
+    9 ,
+    12  ,
+    16  ,
+    19  ,
+    22  ,
+    25  ,
+    28  ,
+    31  ,
+    34  ,
+    37  ,
+    40  ,
+    43  ,
+    46  ,
+    49  ,
+    52  ,
+    54  ,
+    57  ,
+    60  ,
+    63  ,
+    66  ,
+    68  ,
+    71  ,
+    73  ,
+    76  ,
+    78  ,
+    81  ,
+    83  ,
+    86  ,
+    88  ,
+    90  ,
+    92  ,
+    95  ,
+    97  ,
+    99  ,
+    101 ,
+    102 ,
+    104 ,
+    106 ,
+    108 ,
+    109 ,
+    111 ,
+    113 ,
+    114 ,
+    115 ,
+    117 ,
+    118 ,
+    119 ,
+    120 ,
+    121 ,
+    122 ,
+    123 ,
+    124 ,
+    125 ,
+    125 ,
+    126 ,
+    126 ,
+    127
+};
+
 uint16_t ui16_PWM_cycles_counter = 1;
 uint16_t ui16_PWM_cycles_counter_6 = 1;
 uint16_t ui16_PWM_cycles_counter_total = 0xffff;
@@ -295,7 +360,7 @@ uint8_t ui8_sinewave_table_index = 0;
 uint8_t ui8_motor_rotor_absolute_angle;
 uint8_t ui8_motor_rotor_angle;
 
-volatile uint8_t ui8_angle_correction = 0;
+volatile uint8_t ui8_foc_angle_correction = 0;
 uint8_t ui8_interpolation_angle = 0;
 
 uint8_t ui8_motor_commutation_type = BLOCK_COMMUTATION;
@@ -325,105 +390,74 @@ uint16_t ui16_adc_battery_voltage_filtered;
 uint16_t ui16_adc_battery_current_accumulated = 0;
 uint16_t ui16_adc_battery_current_filtered;
 
-uint16_t ui16_angle_acc = 0;
-uint16_t ui16_angle_filt;
+uint16_t ui16_foc_angle_accumulated = 0;
+uint8_t ui8_foc_angle_filtered;
 
 void read_battery_voltage (void);
 void read_battery_current (void);
+uint8_t asin_table (uint8_t ui8_inverted_angle_x128);
 
 void motor_controller (void)
 {
-  uint8_t ui8_temp;
-  static uint16_t ui16_temp;
-  static uint32_t ui32_temp;
-  uint16_t ui16_e_phase_voltage_x512;
+  uint8_t ui8_foc_angle;
+  uint16_t ui16_temp;
+  uint32_t ui32_temp;
   uint16_t ui16_e_phase_voltage;
-  static uint16_t ui16_i_phase_current_x2;
-  static uint32_t ui32_i_phase_current_x2;
-  static uint32_t ui32_l_x100000;
-  uint16_t ui16_i_phase_current;
-  static uint16_t ui16_w_angular_velocity_x10;
-  static uint32_t ui32_w_angular_velocity_x10;
-  uint16_t ui16_w_angular_velocity;
-  uint16_t ui16_iwl;
-  uint16_t ui16_battery_voltage_filtered;
-  uint16_t ui16_battery_current_filtered;
-
-  float f_temp;
+  uint32_t ui32_i_phase_current_x2;
+  uint32_t ui32_l_x1048576;
+  uint32_t ui32_w_angular_velocity_x16;
+  uint16_t ui16_iwl_128;
 
   // reads battery voltage and current
   read_battery_voltage ();
   read_battery_current ();
 
-  // E phase voltage
-  ui16_temp = ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
-  ui16_e_phase_voltage_x512 = (ui16_temp >> 8) * ui8_duty_cycle;
-  ui16_e_phase_voltage = ui16_e_phase_voltage_x512 >> 9;
+  //************************************************************************************
+  // FOC implementation by calculating the angle between phase current and rotor magnetic flux (BEMF)
+  // 1. phase voltage is calculate
+  // 2. I*w*L is calculated, where I is the phase current. L was a measured value for 48V motor.
+  // 3. inverse sin is calculated of (I*w*L) / phase voltage, were we obtain the angle
+  // 4. previous calculated angle is applied to phase voltage vector angle and so the
+  // angle between phase current and rotor magnetic flux (BEMF) is kept at 0 (max torque per amp)
 
-  // I phase current
+  // calc E phase voltage
+  ui16_temp = ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+  ui16_temp = (ui16_temp >> 8) * ui8_duty_cycle;
+  ui16_e_phase_voltage = ui16_temp >> 9;
+
+  // calc I phase current
   if (ui8_duty_cycle > 10)
   {
-   ui16_temp = ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512;
-   ui16_i_phase_current_x2 = ui16_temp / ui8_duty_cycle;
+    ui16_temp = ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512;
+    ui32_i_phase_current_x2 = ui16_temp / ui8_duty_cycle;
   }
   else
   {
-   ui16_i_phase_current_x2 = 0;
+    ui32_i_phase_current_x2 = 0;
   }
-  ui16_i_phase_current = ui16_i_phase_current_x2 >> 1;
 
-  // W angular velocity
-  ui16_w_angular_velocity_x10 = ui16_motor_speed_erps * 63;
-//  ui16_w_angular_velocity = ui16_w_angular_velocity_x10 / 10;
+  // calc W angular velocity: erps * 6.3
+  ui32_w_angular_velocity_x16 = ui16_motor_speed_erps * 101;
 
   // 36V motor: L = 76uH
   // 48V motor: L = 135uH
-  // IwL
-//  ui32_temp = (uint32_t) ui16_i_phase_current_x2 * ui16_w_angular_velocity_x10 * 76;
-  ui32_w_angular_velocity_x10 = ui16_w_angular_velocity_x10;
-  ui32_i_phase_current_x2 = ui16_i_phase_current_x2;
-  ui32_l_x100000 = 135;
+  ui32_l_x1048576 = 142; // 1048576 = 2^20
 
-  ui32_temp = ui32_w_angular_velocity_x10 * ui32_l_x100000;
-  ui32_temp *= ui32_i_phase_current_x2;
-  ui16_iwl = (ui32_temp / 20000000);
+  // calc IwL
+  ui32_temp = ui32_i_phase_current_x2 * ui32_l_x1048576;
+  ui32_temp *= ui32_w_angular_velocity_x16;
+  ui16_iwl_128 = ui32_temp >> 18;
 
-//  ui16_battery_voltage_filtered = (ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512) >> 9;
-//  ui16_battery_current_filtered = (ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512) >> 9;
+  // calc FOC angle
+  ui8_foc_angle = asin_table (ui16_iwl_128 / ui16_e_phase_voltage);
 
-  f_temp = asinf((float) ui16_iwl / (float) ui16_e_phase_voltage) * 5732.0;
-  ui16_temp = f_temp;
+  // low pass filter FOC angle
+  ui16_foc_angle_accumulated -= ui16_foc_angle_accumulated >> 4;
+  ui16_foc_angle_accumulated += ui8_foc_angle;
+  ui8_foc_angle_filtered = ui16_foc_angle_accumulated >> 4;
 
-  ui16_angle_acc -= ui16_angle_acc >> 4;
-  ui16_angle_acc += ui16_temp;
-  ui16_angle_filt = ui16_angle_acc >> 4;
-
-//  ui16_angle_filt = ui16_temp;
-
-  ui16_angle_filt /= 100;
-
-  printf ("%d,%d,%d,%d\n",
-          ui16_e_phase_voltage,
-          ui16_i_phase_current,
-          ui16_motor_speed_erps,
-          ui16_angle_filt);
-
-  ui8_angle_correction = - (ui16_angle_filt);
-
-//  printf ("%d,%d,%d,%d\n",
-//          ui16_e_phase_voltage,
-//          ui16_i_phase_current,
-//          ui16_w_angular_velocity_x10,
-//          ui8_angle_correction);
-
-  if (UART2_GetFlagStatus(UART2_FLAG_RXNE) != RESET)
-    {
-  ui8_temp = getchar ();
-  if (ui8_temp == '1')
-    ui8_angle_correction++;
-  if (ui8_temp == '0')
-    ui8_angle_correction--;
-    }
+  // apply FOC angle
+  ui8_foc_angle_correction = -ui8_foc_angle_filtered;
 }
 
 
@@ -491,7 +525,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
           if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_60_DEGREES)
           {
             ui8_motor_commutation_type = BLOCK_COMMUTATION;
-            ui8_angle_correction = 0;
+            ui8_foc_angle_correction = 0;
           }
         }
       }
@@ -543,7 +577,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     ui8_half_erps_flag = 0;
     ui16_motor_speed_erps = 0;
     ui16_PWM_cycles_counter_total = 0xffff;
-    ui8_angle_correction = 0;
+    ui8_foc_angle_correction = 0;
     ui8_motor_commutation_type = BLOCK_COMMUTATION;
     ui8_hall_sensors_state_last = 0; // this way we force execution of hall sensors code next time
 //    ebike_app_cruise_control_stop ();
@@ -562,12 +596,12 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     // TODO: verifiy if (ui16_PWM_cycles_counter_6 << 8) do not overflow
     ui8_interpolation_angle = (ui16_PWM_cycles_counter_6 << 8) / ui16_PWM_cycles_counter_total; // this operations take 4.4us
     ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
-    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_angle_correction;
+    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_foc_angle_correction;
   }
   else
 #endif
   {
-    ui8_sinewave_table_index = ui8_motor_rotor_absolute_angle + ui8_angle_correction;
+    ui8_sinewave_table_index = ui8_motor_rotor_absolute_angle + ui8_foc_angle_correction;
   }
 
   // we need to put phase voltage 90 degrees ahead of rotor position, to get current 90 degrees ahead and have max torque per amp
@@ -768,10 +802,26 @@ void read_battery_voltage (void)
 
 void read_battery_current (void)
 {
-  int16_t i16_battery_current;
-
   // low pass filter the positive battery readed value (no regen current), to avoid possible fast spikes/noise
   ui16_adc_battery_current_accumulated -= ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
   ui16_adc_battery_current_accumulated += ui16_adc_read_battery_current_10b ();
   ui16_adc_battery_current_filtered = ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
+}
+
+uint8_t asin_table (uint8_t ui8_inverted_angle_x128)
+{
+  uint8_t ui8_index = 0;
+
+  while (ui8_index < SIN_TABLE_LEN)
+  {
+    if (ui8_inverted_angle_x128 < ui8_sin_table [ui8_index])
+    {
+      break;
+    }
+
+    ui8_index++;
+  }
+
+  // first value of table is 0 so ui8_index will always increment to at least 1 and return 0
+  return ui8_index--;
 }

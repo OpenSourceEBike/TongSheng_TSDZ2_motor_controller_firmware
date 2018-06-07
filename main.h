@@ -117,8 +117,8 @@
 
 // Possible values: 0, 1, 2, 3, 4, 5, 6
 // 0 equal to no filtering and no delay, higher values will increase filtering but will also add bigger delay
-#define READ_BATTERY_CURRENT_FILTER_COEFFICIENT 3
-#define READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT 3
+#define READ_BATTERY_CURRENT_FILTER_COEFFICIENT 2
+#define READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT 2
 // *************************************************************************** //
 
 #endif // _MAIN_H_

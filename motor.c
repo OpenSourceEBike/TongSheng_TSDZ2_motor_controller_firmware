@@ -340,7 +340,7 @@ void motor_controller (void)
   uint16_t ui16_e_phase_voltage;
   static uint16_t ui16_i_phase_current_x2;
   static uint32_t ui32_i_phase_current_x2;
-  static uint32_t ui32_l_x1000000;
+  static uint32_t ui32_l_x100000;
   uint16_t ui16_i_phase_current;
   static uint16_t ui16_w_angular_velocity_x10;
   static uint32_t ui32_w_angular_velocity_x10;
@@ -374,7 +374,7 @@ void motor_controller (void)
 
   // W angular velocity
   ui16_w_angular_velocity_x10 = ui16_motor_speed_erps * 63;
-  ui16_w_angular_velocity = ui16_w_angular_velocity_x10 / 10;
+//  ui16_w_angular_velocity = ui16_w_angular_velocity_x10 / 10;
 
   // 36V motor: L = 76uH
   // 48V motor: L = 135uH
@@ -382,29 +382,33 @@ void motor_controller (void)
 //  ui32_temp = (uint32_t) ui16_i_phase_current_x2 * ui16_w_angular_velocity_x10 * 76;
   ui32_w_angular_velocity_x10 = ui16_w_angular_velocity_x10;
   ui32_i_phase_current_x2 = ui16_i_phase_current_x2;
-  ui32_l_x1000000 = 135;
+  ui32_l_x100000 = 135;
 
-  ui32_temp = ui32_w_angular_velocity_x10 * ui32_l_x1000000;
+  ui32_temp = ui32_w_angular_velocity_x10 * ui32_l_x100000;
   ui32_temp *= ui32_i_phase_current_x2;
-  ui16_iwl = (ui32_temp / 2000000);
+  ui16_iwl = (ui32_temp / 20000000);
 
-  ui16_battery_voltage_filtered = (ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512) >> 9;
-  ui16_battery_current_filtered = (ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512) >> 9;
+//  ui16_battery_voltage_filtered = (ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512) >> 9;
+//  ui16_battery_current_filtered = (ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512) >> 9;
 
   f_temp = asinf((float) ui16_iwl / (float) ui16_e_phase_voltage) * 5732.0;
   ui16_temp = f_temp;
 
-  ui16_angle_acc -= ui16_angle_acc >> 6;
+  ui16_angle_acc -= ui16_angle_acc >> 4;
   ui16_angle_acc += ui16_temp;
-  ui16_angle_filt = ui16_angle_acc >> 6;
+  ui16_angle_filt = ui16_angle_acc >> 4;
+
+//  ui16_angle_filt = ui16_temp;
+
+  ui16_angle_filt /= 100;
 
   printf ("%d,%d,%d,%d\n",
           ui16_e_phase_voltage,
           ui16_i_phase_current,
           ui16_motor_speed_erps,
-          ui16_angle_filt/100);
+          ui16_angle_filt);
 
-  ui8_angle_correction =  (ui16_angle_filt/100);
+  ui8_angle_correction = - (ui16_angle_filt);
 
 //  printf ("%d,%d,%d,%d\n",
 //          ui16_e_phase_voltage,

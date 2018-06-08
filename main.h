@@ -97,6 +97,7 @@
 // ADC Battery voltage
 // 0.0862 per ADC_10bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116; this signal atenuated by the opamp 358
 #define ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512 44
+#define ADC_BATTERY_VOLTAGE_PER_ADC_STEP 0.2652
 
 // ADC Battery current
 // 1A per 5 steps of ADC_10bits

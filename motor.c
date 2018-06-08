@@ -395,7 +395,6 @@ uint8_t ui8_foc_angle_filtered;
 
 uint16_t ui16_adc_battery_current_10b;
 uint8_t ui8_adc_battery_current;
-uint16_t ui16_adc_motor_phase_current_10b;
 volatile uint8_t ui8_adc_motor_phase_current;
 
 volatile uint8_t ui8_adc_target_motor_phase_current_max;
@@ -467,6 +466,7 @@ void motor_controller (void)
 
   // apply FOC angle
   ui8_foc_angle_correction = -ui8_foc_angle_filtered;
+  //************************************************************************************
 }
 
 
@@ -481,7 +481,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   uint8_t ui8_temp;
 
   /****************************************************************************/
-  // read battery current ADC value
+  // read battery current ADC value | should happen at middle of the PWM duty_cycle
   // disable scan mode
   ADC1->CR2 &= (uint8_t)(~ADC1_CR2_SCAN);
   // clear EOC flag first (selected also channel 5)
@@ -495,12 +495,10 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // calculate motor phase current ADC value
   if (ui8_duty_cycle > 0)
   {
-    ui16_adc_motor_phase_current_10b = (ui16_adc_battery_current_10b << 8) / ui8_duty_cycle;
-    ui8_adc_motor_phase_current = ui16_adc_motor_phase_current_10b >> 2;
+    ui8_adc_motor_phase_current = ((ui16_adc_battery_current_10b << 6) / ((uint16_t) ui8_duty_cycle));
   }
   else
   {
-    ui16_adc_motor_phase_current_10b = 0;
     ui8_adc_motor_phase_current = 0;
   }
   /****************************************************************************/
@@ -515,7 +513,6 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   /****************************************************************************/
   // read hall sensor signals and:
   // - find the motor rotor absolute angle
-  // - read FOC Id current and calc FOC (adjust ui8_angle_correction)
   // - calc motor speed in erps (ui16_motor_speed_erps)
 
   // read hall sensors signal pins and mask other pins
@@ -650,12 +647,10 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // - limit motor max phase current
   // - limit motor max ERPS
   // - ramp up/down PWM duty_cycle value
-
-//  if ((ui8_adc_battery_current > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
-if (ui8_adc_battery_current > ui8_adc_target_battery_current_max) // battery max current, reduce duty_cycle
-//      (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max) || // motor max phase current, reduce duty_cycle
-//      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
-//      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
+  if ((ui8_adc_battery_current > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
+      (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max) || // motor max phase current, reduce duty_cycle
+      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
+      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
   {
     if (ui8_duty_cycle > 0)
     {
@@ -848,7 +843,7 @@ void read_battery_current (void)
 {
   // low pass filter the positive battery readed value (no regen current), to avoid possible fast spikes/noise
   ui16_adc_battery_current_accumulated -= ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
-  ui16_adc_battery_current_accumulated += ui16_adc_motor_phase_current_10b;
+  ui16_adc_battery_current_accumulated += ui16_adc_battery_current_10b;
   ui16_adc_battery_current_filtered = ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
 }
 

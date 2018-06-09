@@ -429,7 +429,7 @@ void motor_controller (void)
   // angle between phase current and rotor magnetic flux (BEMF) is kept at 0 (max torque per amp)
 
   // calc E phase voltage
-  ui16_temp = ui16_adc_battery_voltage_filtered * ADC_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+  ui16_temp = ui16_adc_battery_voltage_filtered * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
   ui16_temp = (ui16_temp >> 8) * ui8_duty_cycle;
   ui16_e_phase_voltage = ui16_temp >> 9;
 
@@ -649,7 +649,8 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // - ramp up/down PWM duty_cycle value
   if ((ui8_adc_battery_current > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
       (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max) || // motor max phase current, reduce duty_cycle
-      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
+//      (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max)) // motor max phase current, reduce duty_cycle
+//      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
       (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
   {
     if (ui8_duty_cycle > 0)

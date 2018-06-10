@@ -25,7 +25,16 @@ extern volatile uint8_t ui8_adc_battery_current_offset;
 extern volatile uint8_t ui8_ebike_app_state;
 extern volatile uint8_t ui8_adc_target_battery_current_max;
 
+extern volatile uint16_t ui16_pas_pwm_cycles_ticks;
+extern volatile uint8_t ui8_pas_direction;
+
+extern volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks;
+extern volatile uint8_t ui8_wheel_speed_sensor_is_disconnected;
+
+extern uint8_t ui8_pas_cadence_rpm;
+
 void ebike_app_init (void);
 void ebike_app_controller (void);
+void read_pas_cadence (void);
 
 #endif /* _EBIKE_APP_H_ */

@@ -28,6 +28,8 @@ extern volatile uint16_t ui16_motor_speed_erps;
 extern volatile uint8_t ui8_adc_motor_phase_current_offset;
 extern volatile uint8_t ui8_foc_angle_correction;
 extern volatile uint8_t ui8_adc_motor_phase_current;
+extern volatile uint8_t ui8_pas_1;
+extern volatile uint8_t ui8_pas_2;
 
 /***************************************************************************************/
 // Motor interface

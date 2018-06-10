@@ -356,6 +356,7 @@ uint16_t ui16_PWM_cycles_counter_6 = 1;
 uint16_t ui16_PWM_cycles_counter_total = 0xffff;
 
 volatile uint16_t ui16_motor_speed_erps = 0;
+uint8_t ui8_motor_over_speed_erps_flag = 0;
 uint8_t ui8_sinewave_table_index = 0;
 uint8_t ui8_motor_rotor_absolute_angle;
 uint8_t ui8_motor_rotor_angle;
@@ -543,6 +544,9 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
         if (ui16_PWM_cycles_counter_total > 0) { ui16_motor_speed_erps = ((uint16_t) PWM_CYCLES_SECOND) / ui16_PWM_cycles_counter_total; }
         else { ui16_motor_speed_erps = ((uint16_t) PWM_CYCLES_SECOND); }
 
+        // disable flag at every ERPS when ui16_motor_speed_erps is calculated
+        ui8_motor_over_speed_erps_flag = 0;
+
         // update motor commutation state based on motor speed
         if (ui16_motor_speed_erps > MOTOR_ROTOR_ERPS_START_INTERPOLATION_60_DEGREES)
         {
@@ -647,12 +651,21 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // - limit motor max phase current
   // - limit motor max ERPS
   // - ramp up/down PWM duty_cycle value
+
   if ((ui8_adc_battery_current > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
       (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max) || // motor max phase current, reduce duty_cycle
-//      (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max)) // motor max phase current, reduce duty_cycle
-//      (ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) || // motor speed over max ERPS, reduce duty_cycle
       (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
   {
+    if (ui8_duty_cycle > 0)
+    {
+      ui8_duty_cycle--;
+    }
+  }
+  else if ((ui16_motor_speed_erps > MOTOR_OVER_SPEED_ERPS) && // motor speed over max ERPS, reduce duty_cycle
+      (ui8_motor_over_speed_erps_flag == 0))
+  {
+    ui8_motor_over_speed_erps_flag = 1;
+
     if (ui8_duty_cycle > 0)
     {
       ui8_duty_cycle--;
@@ -665,7 +678,12 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
       if (ui16_counter_duty_cycle_ramp_up++ >= ui16_duty_cycle_ramp_up_inverse_step)
       {
         ui16_counter_duty_cycle_ramp_up = 0;
-        ui8_duty_cycle++;
+
+        // don't increase duty_cycle if motor_over_speed_erps
+        if (ui8_motor_over_speed_erps_flag == 0)
+        {
+          ui8_duty_cycle++;
+        }
       }
     }
     else if (ui8_duty_cycle_target < ui8_duty_cycle)

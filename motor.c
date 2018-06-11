@@ -405,10 +405,10 @@ uint8_t ui8_pas_state;
 uint8_t ui8_pas_state_old;
 uint16_t ui16_pas_counter = (uint16_t) PAS_ABSOLUTE_MIN_CADENCE_PWM_CYCLE_TICKS;
 
-volatile uint8_t ui8_torque_sensor_throttle_processed_value = 0;
+volatile uint16_t ui16_torque_sensor_throttle_processed_value = 0;
 uint8_t ui8_torque_sensor_pas_signal_change_counter = 0;
-uint8_t ui8_torque_sensor_throttle_max_value = 0;
-uint8_t ui8_torque_sensor_throttle_value;
+uint16_t ui16_torque_sensor_throttle_max_value = 0;
+uint16_t ui16_torque_sensor_throttle_value;
 
 void read_battery_voltage (void);
 void read_battery_current (void);
@@ -825,20 +825,22 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
      }
 
      // filter the torque signal, by saving the max value of each one pedal rotation
-     ui8_torque_sensor_throttle_value = UI8_ADC_TORQUE_SENSOR;
+     ui16_torque_sensor_throttle_value = ui16_adc_read_torque_sensor_10b () - 184;
+     if (ui16_torque_sensor_throttle_value > 800) ui16_torque_sensor_throttle_value = 0;
+
      ui8_torque_sensor_pas_signal_change_counter++;
      if (ui8_torque_sensor_pas_signal_change_counter > (PAS_NUMBER_MAGNETS << 1)) // PAS_NUMBER_MAGNETS*2 means a full pedal rotation
      {
        ui8_torque_sensor_pas_signal_change_counter = 1; // this is the first cycle
-       ui8_torque_sensor_throttle_processed_value = ui8_torque_sensor_throttle_max_value; // store the max value on the output variable of this algorithm
-       ui8_torque_sensor_throttle_max_value = 0; // reset the max value
+       ui16_torque_sensor_throttle_processed_value = ui16_torque_sensor_throttle_max_value; // store the max value on the output variable of this algorithm
+       ui16_torque_sensor_throttle_max_value = 0; // reset the max value
      }
      else
      {
        // store the max value
-       if (ui8_torque_sensor_throttle_value > ui8_torque_sensor_throttle_max_value)
+       if (ui16_torque_sensor_throttle_value > ui16_torque_sensor_throttle_max_value)
        {
-         ui8_torque_sensor_throttle_max_value = ui8_torque_sensor_throttle_value;
+         ui16_torque_sensor_throttle_max_value = ui16_torque_sensor_throttle_value;
        }
      }
    }
@@ -850,7 +852,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
      ui16_pas_counter = 0;
      ui8_pas_direction = 0;
 
-     ui8_torque_sensor_throttle_processed_value = 0;
+     ui16_torque_sensor_throttle_processed_value = 0;
    }
    /****************************************************************************/
 

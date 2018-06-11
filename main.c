@@ -59,6 +59,8 @@ int main (void)
   uint16_t ui16_motor_controller_counter = 0;
   uint16_t ui16_debug_uart_counter = 0;
 
+  uint16_t ui16_temp = 0, ui16_throttle_value_filtered = 0;
+
   //set clock at the max 16MHz
   CLK_HSIPrescalerConfig (CLK_PRESCALER_HSIDIV1);
 
@@ -110,8 +112,32 @@ int main (void)
 //        UI8_ADC_BATTERY_CURRENT,
 //        ui8_adc_motor_phase_current);
 
-      printf ("%d\n",
-        ui8_pas_cadence_rpm);
+      ui16_temp = ui16_adc_read_torque_sensor_10b () - 184;
+      if (ui16_temp > 800) ui16_temp = 0;
+
+      // bike is moving but user doesn't pedal, disable throttle signal
+      if (ui8_pas_cadence_rpm == 0)
+      {
+        ui16_throttle_value_filtered = 0;
+        ui16_torque_sensor_throttle_processed_value = 0;
+      }
+      // use ui8_throttle if cadence is lower than 15 RPM, otherwise, use the processed torque sensor value
+      else if ((ui8_pas_cadence_rpm <= 15) ||
+          (ui16_torque_sensor_throttle_processed_value == 0)) // use ui8_throttle_value value while ui8_torque_sensor_throttle_processed_value is 0
+      {
+        ui16_throttle_value_filtered = ui16_temp; // use the fast, unfiltered throttle signal value
+      }
+      else
+      {
+        ui16_throttle_value_filtered = ui16_torque_sensor_throttle_processed_value;
+      }
+
+      if (ui16_temp > 800) ui16_temp = 0;
+      printf ("%d,%d,%d,%d\n",
+              ui16_temp,
+              ui16_throttle_value_filtered,
+              ui8_pas_cadence_rpm,
+              ui16_throttle_value_filtered * (uint16_t) ui8_pas_cadence_rpm);
       continue;
     }
 #endif

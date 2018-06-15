@@ -975,3 +975,13 @@ uint8_t asin_table (uint8_t ui8_inverted_angle_x128)
   // first value of table is 0 so ui8_index will always increment to at least 1 and return 0
   return ui8_index--;
 }
+
+uint8_t motor_get_adc_battery_current_filtered (void)
+{
+  return ui16_adc_battery_current_filtered;
+}
+
+uint8_t motor_get_adc_battery_voltage_filtered (void)
+{
+  return ui16_adc_battery_voltage_filtered;
+}

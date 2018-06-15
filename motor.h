@@ -48,6 +48,8 @@ void motor_controller_reset_state (uint8_t state);
 uint8_t motor_controller_state_is_set (uint8_t state);
 void motor_set_pwm_duty_cycle_target (uint8_t ui8_value);
 void motor_controller (void);
+uint8_t motor_get_adc_battery_current_filtered (void);
+uint8_t motor_get_adc_battery_voltage_filtered (void);
 /***************************************************************************************/
 
 #endif /* _MOTOR_H_ */

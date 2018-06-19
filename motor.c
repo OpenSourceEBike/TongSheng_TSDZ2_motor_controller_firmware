@@ -395,8 +395,10 @@ uint16_t ui16_foc_angle_accumulated = 0;
 uint8_t ui8_foc_angle_filtered;
 
 uint16_t ui16_adc_battery_current_10b;
-uint8_t ui8_adc_battery_current;
+volatile uint8_t ui8_adc_battery_current;
 volatile uint8_t ui8_adc_motor_phase_current;
+uint8_t ui8_current_controller_counter = 0;
+uint8_t ui8_current_controller_flag = 0;
 
 volatile uint8_t ui8_adc_target_motor_phase_current_max;
 volatile uint8_t ui8_adc_motor_phase_current_offset;
@@ -661,9 +663,28 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // - limit motor max ERPS
   // - ramp up/down PWM duty_cycle value
 
-  if ((ui8_adc_battery_current > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
-      (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max) || // motor max phase current, reduce duty_cycle
-      (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN))) // battery voltage under min voltage, reduce duty_cycle
+  // control current only at every some PWM cycles, otherwise will be to fast, maybe because of low pass filter on hardware about reading the current
+  ui8_current_controller_counter++;
+  if (ui8_current_controller_counter > 12)
+  {
+    ui8_current_controller_counter = 0;
+    if ((ui8_adc_battery_current > ui8_adc_target_battery_current_max) || // battery max current, reduce duty_cycle
+        (ui8_adc_motor_phase_current > ui8_adc_target_motor_phase_current_max)) // motor max phase current, reduce duty_cycle
+    {
+      ui8_current_controller_flag = 1;
+
+      if (ui8_duty_cycle > 0)
+      {
+        ui8_duty_cycle--;
+      }
+    }
+  }
+
+  if (ui8_current_controller_flag) // when we control the current, don't execute next ifs otherwise ui8_duty_cycle would be decremented more than one time on each PWM cycle
+  {
+    ui8_current_controller_flag = 0;
+  }
+  else if (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN)) // battery voltage under min voltage, reduce duty_cycle
   {
     if (ui8_duty_cycle > 0)
     {
@@ -981,7 +1002,7 @@ uint8_t motor_get_adc_battery_current_filtered (void)
   return ui16_adc_battery_current_filtered;
 }
 
-uint8_t motor_get_adc_battery_voltage_filtered (void)
+uint16_t motor_get_adc_battery_voltage_filtered (void)
 {
   return ui16_adc_battery_voltage_filtered;
 }

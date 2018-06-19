@@ -146,7 +146,7 @@ void communications_controller (void)
     // see if checksum is ok...
     if (ui8_rx_buffer [6] == ui8_checksum)
     {
-      ui8_target_battery_max_power_x10 = ui8_rx_buffer [2];
+      ui8_target_battery_max_power_x10 = ui8_rx_buffer [2] * 10;
 
       // signal that we processed the full package
       ui8_received_package_flag = 0;
@@ -168,7 +168,7 @@ void uart_send_package (void)
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
-  ui8_tx_buffer[10] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.8);
+  ui8_tx_buffer[10] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.875);
 
   // prepare checksum of the 2 packages
   ui8_checksum = 0;
@@ -215,44 +215,33 @@ f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.0);
   uint16_t ui16_battery_voltage_filtered;
   uint16_t ui16_battery_current;
 
-
-//  ui8_target_current = (uint16_t) (map ((uint32_t) ui8_throttle_value_filtered,
-//         (uint32_t) 0, // min input value
-//         (uint32_t) 255, // max input value
-//         (uint32_t) 0, // min output battery current value
-//         (uint32_t) ui8_adc_battery_max_current));  // max output battery current value
-//  ebike_app_battery_set_current_max (ui8_target_current);
-
   // calc battery voltage
-//  ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
-//  ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
-
-  ui16_battery_voltage_filtered = 45;
+  ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+  ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
 
   //calc I
   ui16_battery_current = 0;
   if (ui8_target_battery_max_power_x10 > 0)
   {
-    ui16_battery_current = ((uint16_t) ui8_target_battery_max_power_x10 * 10) / ui16_battery_voltage_filtered;
+    ui16_battery_current = ((uint16_t) ui8_target_battery_max_power_x10) / ui16_battery_voltage_filtered;
   }
 
-  ebike_app_battery_set_current_max ((uint8_t) ((float) ui16_battery_current * 2.0));
+  ebike_app_battery_set_current_max ((uint8_t) ((float) ui16_battery_current * 1.8)); // each 1 unit = 0.625 amps
 
-
-  //  f_temp = (float) (((float) ui8_throttle_value_filtered) * f_get_assist_level ());
   f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.0);
 
-    ui8_temp = (uint8_t) (map ((uint32_t) f_temp,
-           (uint32_t) 0,
-           (uint32_t) ADC_THROTTLE_MAX_VALUE,
-           (uint32_t) 0,
-           (uint32_t) 255));
+  ui8_temp = (uint8_t) (map ((uint32_t) f_temp,
+         (uint32_t) 0,
+         (uint32_t) ADC_THROTTLE_MAX_VALUE,
+         (uint32_t) 0,
+         (uint32_t) 255));
 
-    motor_set_pwm_duty_cycle_target (ui8_temp);
+  motor_set_pwm_duty_cycle_target (ui8_temp);
 
 #endif
 }
 
+// each 1 unit = 0.625 amps
 void ebike_app_battery_set_current_max (uint8_t ui8_value)
 {
   ui8_adc_target_battery_current_max = ui8_adc_battery_current_offset + ui8_value;

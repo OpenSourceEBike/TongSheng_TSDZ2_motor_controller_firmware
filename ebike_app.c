@@ -59,6 +59,7 @@ volatile uint8_t ui8_uart_received_first_package = 0;
 
 // function prototypes
 void throttle_value_remove_offset (uint8_t *ui8_p_throttle_value);
+void torque_sensor_value_remove_offset (uint8_t *ui8_p_torque_sensor_value);
 static void ebike_control_motor (void);
 void ebike_app_battery_set_current_max (uint8_t ui8_value);
 void communications_controller (void);
@@ -95,18 +96,38 @@ void throttle_value_remove_offset (uint8_t *ui8_p_throttle_value)
   }
 }
 
+void torque_sensor_value_remove_offset (uint8_t *ui8_p_torque_sensor_value)
+{
+  uint8_t ui8_temp;
+
+  // remove throttle signal offset and consider active after a safe threshold
+//  ui8_temp = ui8_adc_torque_sensor_offset + ADC_THROTTLE_THRESHOLD;
+ui8_temp = 38 + ADC_THROTTLE_THRESHOLD;
+  if (*ui8_p_torque_sensor_value > ui8_temp)
+  {
+    *ui8_p_torque_sensor_value -= ui8_temp;
+  }
+  else
+  {
+    *ui8_p_torque_sensor_value = 0;
+  }
+}
+
 void throttle_read (void)
 {
   // read torque sensor signal
-  ui8_throttle_value = UI8_ADC_THROTTLE;
+//  ui8_throttle_value = UI8_ADC_THROTTLE;
+ui8_throttle_value = UI8_ADC_TORQUE_SENSOR;
 
-  throttle_value_remove_offset (&ui8_throttle_value);
+//  throttle_value_remove_offset (&ui8_throttle_value);
+torque_sensor_value_remove_offset (&ui8_throttle_value);
 
   // map throttle value from 0 up to 255
   ui8_throttle_value = (uint8_t) (map (
       ui8_throttle_value,
       (uint8_t) 0,
-      (uint8_t) ADC_THROTTLE_MAX_VALUE,
+//      (uint8_t) ADC_THROTTLE_MAX_VALUE,
+      (uint8_t) ADC_TORQUE_SENSOR_MAX_VALUE,
       (uint8_t) 0,
       (uint8_t) 255));
 
@@ -226,17 +247,24 @@ f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.0);
     ui16_battery_current = ((uint16_t) ui8_target_battery_max_power_x10) / ui16_battery_voltage_filtered;
   }
 
-  ebike_app_battery_set_current_max ((uint8_t) ((float) ui16_battery_current * 1.8)); // each 1 unit = 0.625 amps
 
-  f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.0);
+  ui8_throttle_value_filtered -= 10;
+  f_temp = (float) (((float) ui8_throttle_value_filtered) * 3.0);
 
   ui8_temp = (uint8_t) (map ((uint32_t) f_temp,
          (uint32_t) 0,
-         (uint32_t) ADC_THROTTLE_MAX_VALUE,
+         (uint32_t) 255,
          (uint32_t) 0,
-         (uint32_t) 255));
+         (uint32_t) 16));
+//         (uint32_t) 5));
 
-  motor_set_pwm_duty_cycle_target (ui8_temp);
+  //  ebike_app_battery_set_current_max ((uint8_t) ((float) ui16_battery_current * 1.8)); // each 1 unit = 0.625 amps
+  ebike_app_battery_set_current_max (ui8_temp);
+
+  if (ui8_throttle_value_filtered > 10)
+    motor_set_pwm_duty_cycle_target (255);
+  else
+    motor_set_pwm_duty_cycle_target (0);
 
 #endif
 }

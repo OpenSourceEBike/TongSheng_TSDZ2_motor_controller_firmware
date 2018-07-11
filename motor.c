@@ -414,6 +414,7 @@ uint16_t ui16_torque_sensor_throttle_value;
 
 void read_battery_voltage (void);
 void read_battery_current (void);
+void calc_foc_angle (void);
 uint8_t asin_table (uint8_t ui8_inverted_angle_x128);
 void motor_set_phase_current_max (uint8_t ui8_value);
 
@@ -432,53 +433,7 @@ void motor_controller (void)
   read_battery_voltage ();
   read_battery_current ();
 
-  //************************************************************************************
-  // FOC implementation by calculating the angle between phase current and rotor magnetic flux (BEMF)
-  // 1. phase voltage is calculate
-  // 2. I*w*L is calculated, where I is the phase current. L was a measured value for 48V motor.
-  // 3. inverse sin is calculated of (I*w*L) / phase voltage, were we obtain the angle
-  // 4. previous calculated angle is applied to phase voltage vector angle and so the
-  // angle between phase current and rotor magnetic flux (BEMF) is kept at 0 (max torque per amp)
-
-  // calc E phase voltage
-  ui16_temp = ui16_adc_battery_voltage_filtered * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
-  ui16_temp = (ui16_temp >> 8) * ui8_duty_cycle;
-  ui16_e_phase_voltage = ui16_temp >> 9;
-
-  // calc I phase current
-  if (ui8_duty_cycle > 10)
-  {
-    ui16_temp = ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512;
-    ui32_i_phase_current_x2 = ui16_temp / ui8_duty_cycle;
-  }
-  else
-  {
-    ui32_i_phase_current_x2 = 0;
-  }
-
-  // calc W angular velocity: erps * 6.3
-  ui32_w_angular_velocity_x16 = ui16_motor_speed_erps * 101;
-
-  // 36V motor: L = 76uH
-  // 48V motor: L = 135uH
-  ui32_l_x1048576 = 142; // 1048576 = 2^20
-
-  // calc IwL
-  ui32_temp = ui32_i_phase_current_x2 * ui32_l_x1048576;
-  ui32_temp *= ui32_w_angular_velocity_x16;
-  ui16_iwl_128 = ui32_temp >> 18;
-
-  // calc FOC angle
-  ui8_foc_angle = asin_table (ui16_iwl_128 / ui16_e_phase_voltage);
-
-  // low pass filter FOC angle
-  ui16_foc_angle_accumulated -= ui16_foc_angle_accumulated >> 4;
-  ui16_foc_angle_accumulated += ui8_foc_angle;
-  ui8_foc_angle_filtered = ui16_foc_angle_accumulated >> 4;
-
-  // apply FOC angle
-  ui8_foc_angle_correction = -ui8_foc_angle_filtered;
-  //************************************************************************************
+  calc_foc_angle ();
 }
 
 
@@ -977,6 +932,66 @@ void read_battery_current (void)
   ui16_adc_battery_current_accumulated -= ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
   ui16_adc_battery_current_accumulated += ui16_adc_battery_current_10b;
   ui16_adc_battery_current_filtered = ui16_adc_battery_current_accumulated >> READ_BATTERY_CURRENT_FILTER_COEFFICIENT;
+}
+
+void calc_foc_angle (void)
+{
+  uint8_t ui8_foc_angle;
+  uint16_t ui16_temp;
+  uint32_t ui32_temp;
+  uint16_t ui16_e_phase_voltage;
+  uint32_t ui32_i_phase_current_x2;
+  uint32_t ui32_l_x1048576;
+  uint32_t ui32_w_angular_velocity_x16;
+  uint16_t ui16_iwl_128;
+
+
+  // FOC implementation by calculating the angle between phase current and rotor magnetic flux (BEMF)
+  // 1. phase voltage is calculate
+  // 2. I*w*L is calculated, where I is the phase current. L was a measured value for 48V motor.
+  // 3. inverse sin is calculated of (I*w*L) / phase voltage, were we obtain the angle
+  // 4. previous calculated angle is applied to phase voltage vector angle and so the
+  // angle between phase current and rotor magnetic flux (BEMF) is kept at 0 (max torque per amp)
+
+  // calc E phase voltage
+  ui16_temp = ui16_adc_battery_voltage_filtered * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+  ui16_temp = (ui16_temp >> 8) * ui8_duty_cycle;
+  ui16_e_phase_voltage = ui16_temp >> 9;
+
+  // calc I phase current
+  if (ui8_duty_cycle > 10)
+  {
+    ui16_temp = ui16_adc_battery_current_filtered * ADC_BATTERY_CURRENT_PER_ADC_STEP_X512;
+    ui32_i_phase_current_x2 = ui16_temp / ui8_duty_cycle;
+  }
+  else
+  {
+    ui32_i_phase_current_x2 = 0;
+  }
+
+  // calc W angular velocity: erps * 6.3
+  ui32_w_angular_velocity_x16 = ui16_motor_speed_erps * 101;
+
+  // 36V motor: L = 76uH
+  // 48V motor: L = 135uH
+  ui32_l_x1048576 = 142; // 1048576 = 2^20 | 48V
+//  ui32_l_x1048576 = 80; // 1048576 = 2^20 | 36V
+
+  // calc IwL
+  ui32_temp = ui32_i_phase_current_x2 * ui32_l_x1048576;
+  ui32_temp *= ui32_w_angular_velocity_x16;
+  ui16_iwl_128 = ui32_temp >> 18;
+
+  // calc FOC angle
+  ui8_foc_angle = asin_table (ui16_iwl_128 / ui16_e_phase_voltage);
+
+  // low pass filter FOC angle
+  ui16_foc_angle_accumulated -= ui16_foc_angle_accumulated >> 4;
+  ui16_foc_angle_accumulated += ui8_foc_angle;
+  ui8_foc_angle_filtered = ui16_foc_angle_accumulated >> 4;
+
+  // apply FOC angle
+  ui8_foc_angle_correction = -ui8_foc_angle_filtered;
 }
 
 uint8_t asin_table (uint8_t ui8_inverted_angle_x128)

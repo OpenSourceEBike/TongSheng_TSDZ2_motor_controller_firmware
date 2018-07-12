@@ -116,18 +116,18 @@ ui8_temp = 38 + ADC_THROTTLE_THRESHOLD;
 void throttle_read (void)
 {
   // read torque sensor signal
-//  ui8_throttle_value = UI8_ADC_THROTTLE;
-ui8_throttle_value = UI8_ADC_TORQUE_SENSOR;
+  ui8_throttle_value = UI8_ADC_THROTTLE;
+//ui8_throttle_value = UI8_ADC_TORQUE_SENSOR;
 
-//  throttle_value_remove_offset (&ui8_throttle_value);
-torque_sensor_value_remove_offset (&ui8_throttle_value);
+  throttle_value_remove_offset (&ui8_throttle_value);
+//torque_sensor_value_remove_offset (&ui8_throttle_value);
 
   // map throttle value from 0 up to 255
   ui8_throttle_value = (uint8_t) (map (
       ui8_throttle_value,
       (uint8_t) 0,
-//      (uint8_t) ADC_THROTTLE_MAX_VALUE,
-      (uint8_t) ADC_TORQUE_SENSOR_MAX_VALUE,
+      (uint8_t) ADC_THROTTLE_MAX_VALUE,
+//      (uint8_t) ADC_TORQUE_SENSOR_MAX_VALUE,
       (uint8_t) 0,
       (uint8_t) 255));
 
@@ -220,15 +220,15 @@ static void ebike_control_motor (void)
   float f_temp;
 
 //  f_temp = (float) (((float) ui8_throttle_value_filtered) * f_get_assist_level ());
-f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.0);
+f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.5);
 
-  ui8_temp = (uint8_t) (map ((uint32_t) f_temp,
-         (uint32_t) 0,
-         (uint32_t) ADC_THROTTLE_MAX_VALUE,
-         (uint32_t) 0,
-         (uint32_t) 255));
+  if (f_temp > 255)
+    ui8_temp = 255;
+  else
+    ui8_temp = (uint8_t) f_temp;
 
   motor_set_pwm_duty_cycle_target (ui8_temp);
+
 #elif (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE)
 
   uint8_t ui8_temp;

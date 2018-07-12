@@ -420,15 +420,6 @@ void motor_set_phase_current_max (uint8_t ui8_value);
 
 void motor_controller (void)
 {
-  uint8_t ui8_foc_angle;
-  uint16_t ui16_temp;
-  uint32_t ui32_temp;
-  uint16_t ui16_e_phase_voltage;
-  uint32_t ui32_i_phase_current_x2;
-  uint32_t ui32_l_x1048576;
-  uint32_t ui32_w_angular_velocity_x16;
-  uint16_t ui16_iwl_128;
-
   // reads battery voltage and current
   read_battery_voltage ();
   read_battery_current ();
@@ -974,8 +965,12 @@ void calc_foc_angle (void)
 
   // 36V motor: L = 76uH
   // 48V motor: L = 135uH
-  ui32_l_x1048576 = 142; // 1048576 = 2^20 | 48V
+//  ui32_l_x1048576 = 142; // 1048576 = 2^20 | 48V
 //  ui32_l_x1048576 = 80; // 1048576 = 2^20 | 36V
+
+  // ui32_l_x1048576 = 142 <--- THIS VALUE WAS verified experimentaly on 2018.07 to be near the best value for a 48V motor,
+  // test done with a fixed mechanical load, duty_cycle = 200 and 100 and measured battery current was 16 and 6 (10 and 4 amps)
+  ui32_l_x1048576 = 142;
 
   // calc IwL
   ui32_temp = ui32_i_phase_current_x2 * ui32_l_x1048576;
@@ -991,9 +986,10 @@ void calc_foc_angle (void)
   ui8_foc_angle_filtered = ui16_foc_angle_accumulated >> 4;
 
   // apply FOC angle
-  ui8_foc_angle_correction = -ui8_foc_angle_filtered;
+  ui8_foc_angle_correction = ui8_foc_angle_filtered;
 }
 
+// calc asin also converts the final result to degrees
 uint8_t asin_table (uint8_t ui8_inverted_angle_x128)
 {
   uint8_t ui8_index = 0;

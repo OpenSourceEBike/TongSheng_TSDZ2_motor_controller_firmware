@@ -6,9 +6,9 @@
  * Released under the GPL License, Version 3
  */
 
-#include "motor.h"
 #include <stdint.h>
 #include <stdio.h>
+#include "motor.h"
 #include "interrupts.h"
 #include "stm8s_gpio.h"
 #include "stm8s_tim1.h"
@@ -737,12 +737,6 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   // phase A
   TIM1->CCR1H = (uint8_t) (ui8_phase_a_voltage >> 7);
   TIM1->CCR1L = (uint8_t) (ui8_phase_a_voltage << 1);
-
-  // enable PWM signals only when MOTOR_CONTROLLER_STATE_OK
-  if (ui8_motor_controller_state == MOTOR_CONTROLLER_STATE_OK)
-  {
-    TIM1->BKR |= TIM1_BKR_MOE;
-  }
   /****************************************************************************/
 
   /****************************************************************************/
@@ -923,6 +917,9 @@ void motor_init (void)
 void motor_set_pwm_duty_cycle_target (uint8_t ui8_value)
 {
   if (ui8_value > PWM_DUTY_CYCLE_MAX) { ui8_value = PWM_DUTY_CYCLE_MAX; }
+
+  // if brake is active, keep duty_cycle target at 0
+  if (ui8_motor_controller_state & MOTOR_CONTROLLER_STATE_BRAKE) { ui8_value = 0; }
 
   ui8_duty_cycle_target = ui8_value;
 }

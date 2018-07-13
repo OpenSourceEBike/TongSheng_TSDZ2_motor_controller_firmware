@@ -206,12 +206,31 @@ void uart_send_package (void)
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
+//  // calc battery pack state of charge (SOC)
+//  ui16_battery_volts = ((uint16_t) ebike_app_get_ADC_battery_voltage_filtered ()) * ((uint16_t) ADC_BATTERY_VOLTAGE_K);
+//  if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_80)) { ui8_rx_buffer[1] = 32; } // 4 bars | full
+//  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_60)) { ui8_rx_buffer[1] = 16; } // 3 bars
+//  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_40)) { ui8_rx_buffer[1] = 8; } // 2 bars
+//  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_20)) { ui8_rx_buffer[1] = 4; } // 1 bar
+//  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_10)) { ui8_rx_buffer[1] = 2; } // empty
+//  else { ui8_rx_buffer[1] = 1; } // flashing
+
   // wheel speed
   ui8_tx_buffer[6] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
   ui8_tx_buffer[7] = (uint8_t) (ui16_wheel_speed_x10 >> 8);
 
   // battery current
   ui8_tx_buffer[10] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.875);
+
+  // brake state
+  if (motor_controller_state_is_set (MOTOR_CONTROLLER_STATE_BRAKE))
+  {
+    ui8_tx_buffer[11] |= 1;
+  }
+  else
+  {
+    ui8_tx_buffer[11] &= ~1;
+  }
 
   // prepare checksum of the 2 packages
   ui8_checksum = 0;
@@ -244,6 +263,7 @@ static void ebike_control_motor (void)
 //  f_temp = (float) (((float) ui8_throttle_value_filtered) * f_get_assist_level ());
 f_temp = (float) (((float) ui8_throttle_value_filtered) * 2.0);
 
+  // limit to max of 255
   if (f_temp > 255)
     ui8_temp = 255;
   else

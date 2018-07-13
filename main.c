@@ -73,6 +73,7 @@ int main (void)
   adc_init ();
   torque_sensor_init ();
   pas_init ();
+  wheel_speed_sensor_init ();
   hall_sensor_init ();
   pwm_init_bipolar_4q ();
   motor_init ();

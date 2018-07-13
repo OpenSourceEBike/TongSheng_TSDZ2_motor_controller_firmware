@@ -38,10 +38,13 @@ volatile uint16_t ui16_pas_pwm_cycles_ticks = (uint16_t) PAS_ABSOLUTE_MIN_CADENC
 volatile uint8_t ui8_pas_direction = 0;
 uint8_t ui8_pas_cadence_rpm = 0;
 
+// wheel speed
 volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks = (uint16_t) WHEEL_SPEED_SENSOR_MAX_PWM_CYCLE_TICKS;
-volatile uint8_t ui8_wheel_speed_sensor_is_disconnected = 1; // must start with this value to have correct value at start up
-
 uint8_t ui8_wheel_speed_max = 0;
+float f_wheel_speed_x10;
+uint16_t ui16_wheel_speed_x10;
+
+volatile struct_lcd_configuration_variables lcd_configuration_variables;
 
 // UART
 volatile uint8_t ui8_received_package_flag = 0;
@@ -64,6 +67,7 @@ static void ebike_control_motor (void);
 void ebike_app_battery_set_current_max (uint8_t ui8_value);
 void communications_controller (void);
 void uart_send_package (void);
+void calc_wheel_speed (void);
 
 void read_pas_cadence (void)
 {
@@ -142,12 +146,9 @@ void ebike_app_init (void)
 void ebike_app_controller (void)
 {
   throttle_read ();
-
   read_pas_cadence ();
-
+  calc_wheel_speed ();
   ebike_control_motor ();
-
-  // send and received information to/from the LCD as also setup the configuration variables
   communications_controller ();
 }
 
@@ -167,7 +168,23 @@ void communications_controller (void)
     // see if checksum is ok...
     if (ui8_rx_buffer [6] == ui8_checksum)
     {
-      ui8_target_battery_max_power_x10 = ui8_rx_buffer [2] * 10;
+      // assist level
+      if (ui8_rx_buffer [1] & (1 << 4)) { lcd_configuration_variables.ui8_assist_level = 0; }
+      if (ui8_rx_buffer [1] & (1 << 7)) { lcd_configuration_variables.ui8_assist_level = 1; }
+      if (ui8_rx_buffer [1] & (1 << 6)) { lcd_configuration_variables.ui8_assist_level = 2; }
+      if (ui8_rx_buffer [1] & (1 << 1)) { lcd_configuration_variables.ui8_assist_level = 3; }
+      if (ui8_rx_buffer [1] & (1 << 2)) { lcd_configuration_variables.ui8_assist_level = 4; }
+      if (ui8_rx_buffer [1] & (1 << 3)) { lcd_configuration_variables.ui8_assist_level = 5; }
+      // head light
+      lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 0)) ? 1: 0;
+      // walk assist
+      lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
+      // target battery max power
+      lcd_configuration_variables.ui8_target_battery_max_power = ui8_rx_buffer [2];
+      // wheel perimeter
+      lcd_configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [4]) << 8) + ((uint16_t) ui8_rx_buffer [3]);
+      // target battery max power
+      lcd_configuration_variables.ui8_max_speed = ui8_rx_buffer [5];
 
       // signal that we processed the full package
       ui8_received_package_flag = 0;
@@ -189,6 +206,11 @@ void uart_send_package (void)
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
+  // wheel speed
+  ui8_tx_buffer[6] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
+  ui8_tx_buffer[7] = (uint8_t) (ui16_wheel_speed_x10 >> 8);
+
+  // battery current
   ui8_tx_buffer[10] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.875);
 
   // prepare checksum of the 2 packages
@@ -220,7 +242,7 @@ static void ebike_control_motor (void)
   float f_temp;
 
 //  f_temp = (float) (((float) ui8_throttle_value_filtered) * f_get_assist_level ());
-f_temp = (float) (((float) ui8_throttle_value_filtered) * 1.5);
+f_temp = (float) (((float) ui8_throttle_value_filtered) * 2.0);
 
   if (f_temp > 255)
     ui8_temp = 255;
@@ -319,5 +341,21 @@ void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
       default:
       break;
     }
+  }
+}
+
+void calc_wheel_speed (void)
+{
+  // calc wheel speed in km/h
+  if (ui16_wheel_speed_sensor_pwm_cycles_ticks < WHEEL_SPEED_SENSOR_MIN_PWM_CYCLE_TICKS)
+  {
+    f_wheel_speed_x10 = ((float) PWM_CYCLES_SECOND) / ((float) ui16_wheel_speed_sensor_pwm_cycles_ticks); // rps
+    f_wheel_speed_x10 *= lcd_configuration_variables.ui16_wheel_perimeter; // millimeters per second
+    f_wheel_speed_x10 *= 0.036; // ((3600 / (1000 * 1000)) * 10) kms per hour * 10
+    ui16_wheel_speed_x10 = (uint16_t) f_wheel_speed_x10;
+  }
+  else
+  {
+    ui16_wheel_speed_x10 = 0;
   }
 }

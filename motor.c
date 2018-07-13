@@ -412,6 +412,11 @@ uint8_t ui8_torque_sensor_pas_signal_change_counter = 0;
 uint16_t ui16_torque_sensor_throttle_max_value = 0;
 uint16_t ui16_torque_sensor_throttle_value;
 
+// wheel speed
+uint8_t ui8_wheel_speed_sensor_state = 1;
+uint8_t ui8_wheel_speed_sensor_state_old = 1;
+uint16_t ui16_wheel_speed_sensor_counter = 0;
+
 void read_battery_voltage (void);
 void read_battery_current (void);
 void calc_foc_angle (void);
@@ -820,6 +825,39 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
      ui8_pas_direction = 0;
 
      ui16_torque_sensor_throttle_processed_value = 0;
+   }
+   /****************************************************************************/
+
+   /****************************************************************************/
+   // calc wheel speed sensor timming between each positive pulses, in PWM cycles ticks
+   ui16_wheel_speed_sensor_counter++;
+
+   // detect wheel speed sensor signal changes
+   if (WHEEL_SPEED_SENSOR__PORT->IDR & WHEEL_SPEED_SENSOR__PIN)
+   {
+     ui8_wheel_speed_sensor_state = 1;
+   }
+   else
+   {
+     ui8_wheel_speed_sensor_state = 0;
+   }
+
+   if (ui8_wheel_speed_sensor_state != ui8_wheel_speed_sensor_state_old) // wheel speed sensor signal did change
+   {
+     ui8_wheel_speed_sensor_state_old = ui8_wheel_speed_sensor_state;
+
+     if (ui8_wheel_speed_sensor_state == 1) // consider only when wheel speed sensor signal transition from 0 to 1
+     {
+       ui16_wheel_speed_sensor_pwm_cycles_ticks = ui16_wheel_speed_sensor_counter;
+       ui16_wheel_speed_sensor_counter = 0;
+     }
+   }
+
+   // limit min wheel speed
+   if (ui16_wheel_speed_sensor_counter > ((uint16_t) WHEEL_SPEED_SENSOR_MIN_PWM_CYCLE_TICKS))
+   {
+     ui16_wheel_speed_sensor_pwm_cycles_ticks = (uint16_t) WHEEL_SPEED_SENSOR_MIN_PWM_CYCLE_TICKS;
+     ui16_wheel_speed_sensor_counter = 0;
    }
    /****************************************************************************/
 

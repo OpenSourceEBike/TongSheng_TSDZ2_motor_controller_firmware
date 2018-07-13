@@ -23,10 +23,8 @@ void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTC_IRQHANDLER)
 //  if (brake_is_set())
 //  {
 //    motor_controller_set_state (MOTOR_CONTROLLER_STATE_BRAKE);
-//    ebike_app_battery_set_regen_current_max (ADC_BATTERY_REGEN_CURRENT_MAX);
 //    motor_set_regen_current_max (ADC_MOTOR_REGEN_CURRENT_MAX);
 //    motor_set_pwm_duty_cycle_target (0);
-//    ebike_app_cruise_control_stop ();
 //    ebike_app_set_state (EBIKE_APP_STATE_MOTOR_STOP);
 //  }
 //  else
@@ -35,9 +33,6 @@ void EXTI_PORTC_IRQHandler(void) __interrupt(EXTI_PORTC_IRQHANDLER)
 //    ebike_app_battery_set_regen_current_max (0);
 //    ebike_app_set_state (EBIKE_APP_STATE_MOTOR_STOP);
 //    motor_controller_reset_state (MOTOR_CONTROLLER_STATE_BRAKE);
-//#if defined (EBIKE_REGEN_EBRAKE_LIKE_COAST_BRAKES)
-//    motor_reset_regen_ebrake_like_coast_brakes ();
-//#endif
 //  }
 }
 

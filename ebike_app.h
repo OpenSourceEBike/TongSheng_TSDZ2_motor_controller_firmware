@@ -18,6 +18,16 @@
 #define EBIKE_APP_STATE_MOTOR_COOL  3
 #define EBIKE_APP_STATE_MOTOR_RUNNING   4
 
+typedef struct _lcd_configuration_variables
+{
+  uint16_t ui16_wheel_perimeter;
+  uint8_t ui8_assist_level;
+  uint8_t ui8_head_light;
+  uint8_t ui8_walk_assist;
+  uint8_t ui8_max_speed;
+  uint8_t ui8_target_battery_max_power;
+} struct_lcd_configuration_variables;
+
 extern volatile uint8_t ui8_throttle_value;
 extern volatile uint8_t ui8_adc_throttle_offset;
 extern volatile uint8_t ui8_adc_torque_sensor_offset;

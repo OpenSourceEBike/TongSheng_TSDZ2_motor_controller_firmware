@@ -27,7 +27,7 @@ uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
 
 volatile uint8_t ui8_throttle_value = 0;
-volatile uint8_t ui8_throttle_value_filtered = 0;
+volatile uint8_t ui8_torque_sensor_throttle_value_filtered = 0;
 volatile uint8_t ui8_adc_throttle_offset;
 volatile uint8_t ui8_adc_torque_sensor_offset;
 volatile uint8_t ui8_adc_battery_current_offset;
@@ -68,6 +68,7 @@ void ebike_app_battery_set_current_max (uint8_t ui8_value);
 void communications_controller (void);
 void uart_send_package (void);
 void calc_wheel_speed (void);
+float f_get_assist_level ();
 
 void read_pas_cadence (void)
 {
@@ -105,8 +106,7 @@ void torque_sensor_value_remove_offset (uint8_t *ui8_p_torque_sensor_value)
   uint8_t ui8_temp;
 
   // remove throttle signal offset and consider active after a safe threshold
-//  ui8_temp = ui8_adc_torque_sensor_offset + ADC_THROTTLE_THRESHOLD;
-ui8_temp = 38 + ADC_THROTTLE_THRESHOLD;
+  ui8_temp = ui8_adc_torque_sensor_offset + ADC_THROTTLE_THRESHOLD;
   if (*ui8_p_torque_sensor_value > ui8_temp)
   {
     *ui8_p_torque_sensor_value -= ui8_temp;
@@ -117,25 +117,36 @@ ui8_temp = 38 + ADC_THROTTLE_THRESHOLD;
   }
 }
 
-void throttle_read (void)
+void torque_sensor_throttle_read (void)
 {
-  // read torque sensor signal
+  uint8_t ui8_throttle_value;
+  uint8_t ui8_torque_sensor_value;
+
+  // read signals and remove offsets
   ui8_throttle_value = UI8_ADC_THROTTLE;
-//ui8_throttle_value = UI8_ADC_TORQUE_SENSOR;
-
   throttle_value_remove_offset (&ui8_throttle_value);
-//torque_sensor_value_remove_offset (&ui8_throttle_value);
 
-  // map throttle value from 0 up to 255
+  ui8_torque_sensor_value = UI8_ADC_TORQUE_SENSOR;
+  torque_sensor_value_remove_offset (&ui8_torque_sensor_value);
+
+  // map value from 0 up to 255
   ui8_throttle_value = (uint8_t) (map (
       ui8_throttle_value,
       (uint8_t) 0,
-      (uint8_t) ADC_THROTTLE_MAX_VALUE,
-//      (uint8_t) ADC_TORQUE_SENSOR_MAX_VALUE,
+      (uint8_t) ADC_THROTTLE_MAX_VALUE - (ui8_adc_throttle_offset + ADC_THROTTLE_THRESHOLD),
       (uint8_t) 0,
       (uint8_t) 255));
 
-  ui8_throttle_value_filtered = ui8_throttle_value;
+  // map value from 0 up to 255
+  ui8_torque_sensor_value = (uint8_t) (map (
+      ui8_torque_sensor_value,
+      (uint8_t) 0,
+      (uint8_t) ADC_TORQUE_SENSOR_MAX_VALUE - (ui8_adc_torque_sensor_offset + ADC_TORQUE_SENSOR_THRESHOLD),
+      (uint8_t) 0,
+      (uint8_t) 255));
+
+  // use the value that is the max of both signals
+  ui8_torque_sensor_throttle_value_filtered = ui8_max (ui8_throttle_value, ui8_torque_sensor_value);
 }
 
 void ebike_app_init (void)
@@ -145,7 +156,7 @@ void ebike_app_init (void)
 
 void ebike_app_controller (void)
 {
-  throttle_read ();
+  torque_sensor_throttle_read ();
   read_pas_cadence ();
   calc_wheel_speed ();
   ebike_control_motor ();
@@ -169,14 +180,9 @@ void communications_controller (void)
     if (ui8_rx_buffer [6] == ui8_checksum)
     {
       // assist level
-      if (ui8_rx_buffer [1] & (1 << 4)) { lcd_configuration_variables.ui8_assist_level = 0; }
-      if (ui8_rx_buffer [1] & (1 << 7)) { lcd_configuration_variables.ui8_assist_level = 1; }
-      if (ui8_rx_buffer [1] & (1 << 6)) { lcd_configuration_variables.ui8_assist_level = 2; }
-      if (ui8_rx_buffer [1] & (1 << 1)) { lcd_configuration_variables.ui8_assist_level = 3; }
-      if (ui8_rx_buffer [1] & (1 << 2)) { lcd_configuration_variables.ui8_assist_level = 4; }
-      if (ui8_rx_buffer [1] & (1 << 3)) { lcd_configuration_variables.ui8_assist_level = 5; }
+      lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 0x0f;
       // head light
-      lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 0)) ? 1: 0;
+      lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
       // walk assist
       lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
       // target battery max power
@@ -257,11 +263,29 @@ void uart_send_package (void)
 static void ebike_control_motor (void)
 {
 #if (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_THROTTLE_ONLY)
+
+  motor_set_pwm_duty_cycle_target (ui8_torque_sensor_throttle_value_filtered);
+
+#elif (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE)
+
   uint8_t ui8_temp;
   float f_temp;
+//  uint16_t ui16_battery_voltage_filtered;
+//  uint16_t ui16_battery_current;
+//
+//  // calc battery voltage
+//  ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+//  ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
+//
+//  // calc battery current
+//  ui16_battery_current = 0;
+//  if (ui8_target_battery_max_power_x10 > 0)
+//  {
+//    ui16_battery_current = ((uint16_t) ui8_target_battery_max_power_x10) / ui16_battery_voltage_filtered;
+//  }
 
-//  f_temp = (float) (((float) ui8_throttle_value_filtered) * f_get_assist_level ());
-f_temp = (float) (((float) ui8_throttle_value_filtered) * 2.0);
+  // scale torque_sensor_throttle signal using assist level
+  f_temp = ((float) ui8_torque_sensor_throttle_value_filtered) * f_get_assist_level ();
 
   // limit to max of 255
   if (f_temp > 255)
@@ -269,41 +293,16 @@ f_temp = (float) (((float) ui8_throttle_value_filtered) * 2.0);
   else
     ui8_temp = (uint8_t) f_temp;
 
-  motor_set_pwm_duty_cycle_target (ui8_temp);
-
-#elif (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE)
-
-  uint8_t ui8_temp;
-  float f_temp;
-  uint16_t ui16_battery_voltage_filtered;
-  uint16_t ui16_battery_current;
-
-  // calc battery voltage
-  ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
-  ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
-
-  //calc I
-  ui16_battery_current = 0;
-  if (ui8_target_battery_max_power_x10 > 0)
-  {
-    ui16_battery_current = ((uint16_t) ui8_target_battery_max_power_x10) / ui16_battery_voltage_filtered;
-  }
-
-
-  ui8_throttle_value_filtered -= 10;
-  f_temp = (float) (((float) ui8_throttle_value_filtered) * 3.0);
-
-  ui8_temp = (uint8_t) (map ((uint32_t) f_temp,
+  // map torque_sensor_throttle signal to battery current
+  ui8_temp = (uint8_t) (map ((uint32_t) ui8_temp,
          (uint32_t) 0,
          (uint32_t) 255,
          (uint32_t) 0,
-         (uint32_t) 16));
-//         (uint32_t) 5));
-
-  //  ebike_app_battery_set_current_max ((uint8_t) ((float) ui16_battery_current * 1.8)); // each 1 unit = 0.625 amps
+         (uint32_t) ADC_BATTERY_CURRENT_MAX));
   ebike_app_battery_set_current_max (ui8_temp);
 
-  if (ui8_throttle_value_filtered > 10)
+  // set the target duty_cycle to max, as the battery current controller will manage it
+  if (ui8_temp > 0)
     motor_set_pwm_duty_cycle_target (255);
   else
     motor_set_pwm_duty_cycle_target (0);
@@ -378,4 +377,42 @@ void calc_wheel_speed (void)
   {
     ui16_wheel_speed_x10 = 0;
   }
+}
+
+float f_get_assist_level ()
+{
+  float f_temp;
+
+  switch (lcd_configuration_variables.ui8_assist_level)
+  {
+    case 0:
+    f_temp = ASSIST_LEVEL_0;
+    break;
+
+    case 1:
+    f_temp = ASSIST_LEVEL_1;
+    break;
+
+    case 2:
+    f_temp = ASSIST_LEVEL_2;
+    break;
+
+    case 3:
+    f_temp = ASSIST_LEVEL_3;
+    break;
+
+    case 4:
+    f_temp = ASSIST_LEVEL_4;
+    break;
+
+    case 5:
+    f_temp = ASSIST_LEVEL_5;
+    break;
+
+    default:
+    f_temp = ASSIST_LEVEL_5;
+    break;
+  }
+
+  return f_temp;
 }

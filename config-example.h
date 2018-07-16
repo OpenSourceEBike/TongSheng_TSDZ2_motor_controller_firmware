@@ -37,9 +37,6 @@
 
 // *************************************************************************** //
 // LCD
-// the firmware supports the original LCD and the more complete Kunteng LCD3 and LCD5
-#define LCD_TYPE LCD_TYPE_TSDZ2
-#define LCD_TYPE LCD_TYPE_KUNTENG // shows battery voltage, motor real time usage power, etc
 
 // you can tune LCD assist level
 #define ASSIST_LEVEL_0			0.00

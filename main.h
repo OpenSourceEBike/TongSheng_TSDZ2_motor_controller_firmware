@@ -21,9 +21,6 @@
 #define EBIKE_THROTTLE_TYPE_THROTTLE_ONLY                 3
 // *************************************************************************** //
 
-#define LCD_TYPE_TSDZ2      1
-#define LCD_TYPE_KUNTENG    2
-
 #define PWM_CYCLES_COUNTER_MAX 3125 // 5 erps minimum speed; 1/5 = 200ms; 200ms/64us = 3125
 
 #define PWM_CYCLES_SECOND 15625L // 1 / 64us(PWM period)
@@ -53,7 +50,8 @@
 // Possible values: 0, 1, 2, 3, 4, 5, 6
 // 0 equal to no filtering and no delay, higher values will increase filtering but will also add bigger delay
 #define THROTTLE_FILTER_COEFFICIENT     1
-#define ADC_THROTTLE_THRESHOLD      4 // value in ADC 8 bits step
+#define ADC_THROTTLE_THRESHOLD            4 // value in ADC 8 bits step
+#define ADC_TORQUE_SENSOR_THRESHOLD      4 // value in ADC 8 bits step
 
 #define CRUISE_CONTROL_MIN      20
 

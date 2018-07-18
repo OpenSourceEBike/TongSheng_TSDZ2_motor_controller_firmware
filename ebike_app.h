@@ -29,8 +29,6 @@ typedef struct _lcd_configuration_variables
 } struct_lcd_configuration_variables;
 
 extern volatile uint8_t ui8_throttle_value;
-extern volatile uint8_t ui8_adc_throttle_offset;
-extern volatile uint8_t ui8_adc_torque_sensor_offset;
 extern volatile uint8_t ui8_adc_battery_current_offset;
 extern volatile uint8_t ui8_ebike_app_state;
 extern volatile uint8_t ui8_adc_target_battery_current_max;

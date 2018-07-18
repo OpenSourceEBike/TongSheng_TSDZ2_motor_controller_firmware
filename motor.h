@@ -31,7 +31,7 @@ extern volatile uint8_t ui8_pas_1;
 extern volatile uint8_t ui8_pas_2;
 extern volatile uint16_t ui16_torque_sensor_throttle_processed_value;
 extern volatile uint8_t ui8_adc_battery_current;
-extern uint8_t ui8_foc_angle_filtered;
+extern volatile uint8_t ui8_foc_angle;
 
 /***************************************************************************************/
 // Motor interface

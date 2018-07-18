@@ -111,7 +111,7 @@ int main (void)
         ui16_motor_get_motor_speed_erps(),
         ui8_duty_cycle,
         ui8_adc_battery_current,
-        ui8_foc_angle_filtered
+        ui8_foc_angle
         );
     }
 #endif

@@ -28,7 +28,7 @@ void timer2_init (void)
   TIM2_Cmd(ENABLE);
 
   // IMPORTANT: this software delay is needed so timer2 work after this
-  for(ui16_i = 0; ui16_i < (29000); ui16_i++) { ; }
+  for(ui16_i = 0; ui16_i < (65000); ui16_i++) { ; }
 }
 
 void timer3_init (void)
@@ -41,5 +41,5 @@ void timer3_init (void)
   TIM3_Cmd(ENABLE); // TIM3 counter enable
 
   // IMPORTANT: this software delay is needed so timer3 work after this
-  for(ui16_i = 0; ui16_i < (29000); ui16_i++) { ; }
+  for(ui16_i = 0; ui16_i < (65000); ui16_i++) { ; }
 }

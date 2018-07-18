@@ -361,7 +361,7 @@ uint8_t ui8_sinewave_table_index = 0;
 uint8_t ui8_motor_rotor_absolute_angle;
 uint8_t ui8_motor_rotor_angle;
 
-volatile uint8_t ui8_foc_angle_correction = 0;
+volatile uint8_t ui8_foc_angle = 0;
 uint8_t ui8_interpolation_angle = 0;
 
 uint8_t ui8_motor_commutation_type = BLOCK_COMMUTATION;
@@ -392,7 +392,6 @@ uint16_t ui16_adc_battery_current_accumulated = 0;
 uint16_t ui16_adc_battery_current_filtered;
 
 uint16_t ui16_foc_angle_accumulated = 0;
-uint8_t ui8_foc_angle_filtered;
 
 uint16_t ui16_adc_battery_current_10b;
 volatile uint8_t ui8_adc_battery_current;
@@ -523,7 +522,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
           if (ui8_motor_commutation_type == SINEWAVE_INTERPOLATION_60_DEGREES)
           {
             ui8_motor_commutation_type = BLOCK_COMMUTATION;
-            ui8_foc_angle_correction = 0;
+            ui8_foc_angle = 0;
           }
         }
       }
@@ -575,7 +574,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     ui8_half_erps_flag = 0;
     ui16_motor_speed_erps = 0;
     ui16_PWM_cycles_counter_total = 0xffff;
-    ui8_foc_angle_correction = 0;
+    ui8_foc_angle = 0;
     ui8_motor_commutation_type = BLOCK_COMMUTATION;
     ui8_hall_sensors_state_last = 0; // this way we force execution of hall sensors code next time
 //    ebike_app_cruise_control_stop ();
@@ -594,12 +593,12 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     // TODO: verifiy if (ui16_PWM_cycles_counter_6 << 8) do not overflow
     ui8_interpolation_angle = (ui16_PWM_cycles_counter_6 << 8) / ui16_PWM_cycles_counter_total; // this operations take 4.4us
     ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
-    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_foc_angle_correction;
+    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_foc_angle;
   }
   else
 #endif
   {
-    ui8_sinewave_table_index = ui8_motor_rotor_absolute_angle + ui8_foc_angle_correction;
+    ui8_sinewave_table_index = ui8_motor_rotor_absolute_angle + ui8_foc_angle;
   }
 
   // we need to put phase voltage 90 degrees ahead of rotor position, to get current 90 degrees ahead and have max torque per amp
@@ -962,7 +961,6 @@ void read_battery_current (void)
 
 void calc_foc_angle (void)
 {
-  uint8_t ui8_foc_angle;
   uint16_t ui16_temp;
   uint32_t ui32_temp;
   uint16_t ui16_e_phase_voltage;
@@ -1018,10 +1016,7 @@ void calc_foc_angle (void)
   // low pass filter FOC angle
   ui16_foc_angle_accumulated -= ui16_foc_angle_accumulated >> 4;
   ui16_foc_angle_accumulated += ui8_foc_angle;
-  ui8_foc_angle_filtered = ui16_foc_angle_accumulated >> 4;
-
-  // apply FOC angle
-  ui8_foc_angle_correction = ui8_foc_angle_filtered;
+  ui8_foc_angle = ui16_foc_angle_accumulated >> 4;
 }
 
 // calc asin also converts the final result to degrees

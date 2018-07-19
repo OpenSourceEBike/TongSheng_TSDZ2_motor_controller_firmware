@@ -52,7 +52,7 @@ volatile struct_lcd_configuration_variables lcd_configuration_variables;
 volatile uint8_t ui8_received_package_flag = 0;
 volatile uint8_t ui8_rx_buffer[7];
 volatile uint8_t ui8_rx_counter = 0;
-volatile uint8_t ui8_tx_buffer[18];
+volatile uint8_t ui8_tx_buffer[19];
 volatile uint8_t ui8_tx_counter = 0;
 volatile uint8_t ui8_i;
 volatile uint8_t ui8_checksum;
@@ -174,73 +174,81 @@ void communications_controller (void)
 void uart_send_package (void)
 {
   uint16_t ui16_temp;
+  uint16_t ui16_battery_volts_x256;
+  uint16_t ui8_temp;
 
   //send the data to the LCD
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
-  //  // calc battery pack state of charge (SOC)
-  //  ui16_battery_volts = ((uint16_t) ebike_app_get_ADC_battery_voltage_filtered ()) * ((uint16_t) ADC_BATTERY_VOLTAGE_K);
-  //  if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_80)) { ui8_rx_buffer[1] = 32; } // 4 bars | full
-  //  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_60)) { ui8_rx_buffer[1] = 16; } // 3 bars
-  //  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_40)) { ui8_rx_buffer[1] = 8; } // 2 bars
-  //  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_20)) { ui8_rx_buffer[1] = 4; } // 1 bar
-  //  else if (ui16_battery_volts > ((uint16_t) BATTERY_PACK_VOLTS_10)) { ui8_rx_buffer[1] = 2; } // empty
-  //  else { ui8_rx_buffer[1] = 1; } // flashing
-  // battery pack state of charge (SOC)
-  ui8_tx_buffer[1] = 0;
+  ui16_temp = motor_get_adc_battery_voltage_filtered ();
+  // battery voltage
+  ui8_tx_buffer[1] = (ui16_temp & 0xff);
+  ui8_tx_buffer[2] = ((uint8_t) (ui16_temp >> 4)) & 0x30;
+
+  // calc battery pack state of charge (SOC)
+  ui16_battery_volts_x256 = ((uint16_t) ui16_temp) * ((uint16_t) ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X256);
+  if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_80_X256)) { ui8_temp = 5; } // 4 bars | full
+  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_60_X256)) { ui8_temp = 4; } // 3 bars
+  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_40_X256)) { ui8_temp = 3; } // 2 bars
+  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_20_X256  )) { ui8_temp = 2; } // 1 bar
+  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_10_X256  )) { ui8_temp = 1; } // empty
+  else { ui8_temp = 0; } // flashing
+
+  // battery state of charge (SOC)
+  ui8_tx_buffer[2] |= ui8_temp & 0x0f;
 
   // battery current
-  ui8_tx_buffer[2] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.875);
+  ui8_tx_buffer[3] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.875);
 
   // wheel speed
-  ui8_tx_buffer[3] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
-  ui8_tx_buffer[4] = (uint8_t) (ui16_wheel_speed_x10 >> 8);
+  ui8_tx_buffer[4] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
+  ui8_tx_buffer[5] = (uint8_t) (ui16_wheel_speed_x10 >> 8);
 
   // brake state
   if (motor_controller_state_is_set (MOTOR_CONTROLLER_STATE_BRAKE))
   {
-    ui8_tx_buffer[5] |= 1;
+    ui8_tx_buffer[6] |= 1;
   }
   else
   {
-    ui8_tx_buffer[5] &= ~1;
+    ui8_tx_buffer[6] &= ~1;
   }
 
   // error states
-  ui8_tx_buffer[6] = 0;
+  ui8_tx_buffer[7] = 0;
 
   // ADC throttle
-  ui8_tx_buffer[7] = UI8_ADC_THROTTLE;
+  ui8_tx_buffer[8] = UI8_ADC_THROTTLE;
   // throttle value with offset removed and mapped to 255
-  ui8_tx_buffer[8] = ui8_throttle_value_filtered;
+  ui8_tx_buffer[9] = ui8_throttle_value_filtered;
   // ADC torque_sensor
-  ui8_tx_buffer[9] = UI8_ADC_TORQUE_SENSOR;
+  ui8_tx_buffer[10] = UI8_ADC_TORQUE_SENSOR;
   // throttle value with offset removed and mapped to 255
-  ui8_tx_buffer[10] = ui8_torque_sensor_value_filtered;
+  ui8_tx_buffer[11] = ui8_torque_sensor_value_filtered;
   // PAS cadence
-  ui8_tx_buffer[11] = ui8_pas_cadence_rpm;
+  ui8_tx_buffer[12] = ui8_pas_cadence_rpm;
   // pedal human power mapped to 255
-  ui8_tx_buffer[12] = ui8_pedal_human_power;
+  ui8_tx_buffer[13] = ui8_pedal_human_power;
   // PWM duty_cycle
-  ui8_tx_buffer[13] = ui8_duty_cycle;
+  ui8_tx_buffer[14] = ui8_duty_cycle;
   // motor speed in ERPS
   ui16_temp = ui16_motor_get_motor_speed_erps(),
-  ui8_tx_buffer[14] = (uint8_t) (ui16_temp & 0xff);
-  ui8_tx_buffer[15] = (uint8_t) (ui16_temp >> 8) & 0xff;
+  ui8_tx_buffer[15] = (uint8_t) (ui16_temp & 0xff);
+  ui8_tx_buffer[16] = (uint8_t) (ui16_temp >> 8) & 0xff;
   // FOC angle
-  ui8_tx_buffer[16] = ui8_foc_angle;
+  ui8_tx_buffer[17] = ui8_foc_angle;
 
   // prepare checksum of the package
   ui8_checksum = 0;
-  for (ui8_i = 0; ui8_i <= 16; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 17; ui8_i++)
   {
     ui8_checksum += ui8_tx_buffer[ui8_i];
   }
-  ui8_tx_buffer[17] = ui8_checksum;
+  ui8_tx_buffer[18] = ui8_checksum;
 
   // send the full package to UART
-  for (ui8_i = 0; ui8_i <= 17; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 18; ui8_i++)
   {
     putchar (ui8_tx_buffer[ui8_i]);
   }

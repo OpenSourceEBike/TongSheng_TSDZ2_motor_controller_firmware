@@ -33,7 +33,8 @@ volatile uint8_t ui8_torque_sensor_value_filtered = 0;
 volatile uint8_t ui8_adc_torque_sensor_offset;
 volatile uint8_t ui8_adc_battery_current_offset;
 volatile uint8_t ui8_ebike_app_state = EBIKE_APP_STATE_MOTOR_STOP;
-volatile uint8_t ui8_adc_target_battery_current_max;
+volatile uint8_t ui8_adc_target_battery_max_current;
+uint8_t ui8_adc_battery_current_max;
 
 volatile uint16_t ui16_pas_pwm_cycles_ticks = (uint16_t) PAS_ABSOLUTE_MIN_CADENCE_PWM_CYCLE_TICKS;
 volatile uint8_t ui8_pas_direction = 0;
@@ -50,7 +51,7 @@ volatile struct_lcd_configuration_variables lcd_configuration_variables;
 
 // UART
 volatile uint8_t ui8_received_package_flag = 0;
-volatile uint8_t ui8_rx_buffer[7];
+volatile uint8_t ui8_rx_buffer[8];
 volatile uint8_t ui8_rx_counter = 0;
 volatile uint8_t ui8_tx_buffer[19];
 volatile uint8_t ui8_tx_counter = 0;
@@ -64,7 +65,8 @@ volatile uint8_t ui8_uart_received_first_package = 0;
 
 // function prototypes
 static void ebike_control_motor (void);
-void ebike_app_battery_set_current_max (uint8_t ui8_value);
+void ebike_app_set_battery_max_current (uint8_t ui8_value);
+void ebike_app_set_target_adc_battery_max_current (uint8_t ui8_value);
 void communications_controller (void);
 void uart_send_package (void);
 void calc_wheel_speed (void);
@@ -115,7 +117,7 @@ void throttle_read (void)
 
 void ebike_app_init (void)
 {
-  ebike_app_battery_set_current_max (ADC_BATTERY_CURRENT_MAX);
+  ebike_app_set_battery_max_current (ADC_BATTERY_CURRENT_MAX);
 }
 
 void ebike_app_controller (void)
@@ -136,13 +138,13 @@ void communications_controller (void)
     // validation of the package data
     // last byte is the checksum
     ui8_checksum = 0;
-    for (ui8_i = 0; ui8_i <= 5; ui8_i++)
+    for (ui8_i = 0; ui8_i <= 6; ui8_i++)
     {
       ui8_checksum += ui8_rx_buffer[ui8_i];
     }
 
     // see if checksum is ok...
-    if (ui8_rx_buffer [6] == ui8_checksum)
+    if (ui8_rx_buffer [7] == ui8_checksum)
     {
       // assist level
       lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 0x0f;
@@ -150,12 +152,14 @@ void communications_controller (void)
       lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
       // walk assist
       lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
+      // battery max current
+      ebike_app_set_battery_max_current ( ui8_rx_buffer [2]);
       // target battery max power
-      lcd_configuration_variables.ui8_target_battery_max_power = ui8_rx_buffer [2];
+      lcd_configuration_variables.ui8_target_battery_max_power_div10 = ui8_rx_buffer [3];
       // wheel perimeter
-      lcd_configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [4]) << 8) + ((uint16_t) ui8_rx_buffer [3]);
-      // target battery max power
-      lcd_configuration_variables.ui8_max_speed = ui8_rx_buffer [5];
+      lcd_configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [5]) << 8) + ((uint16_t) ui8_rx_buffer [4]);
+      // wheel max speed
+      lcd_configuration_variables.ui8_wheel_max_speed = ui8_rx_buffer [6];
 
       // signal that we processed the full package
       ui8_received_package_flag = 0;
@@ -181,7 +185,7 @@ void uart_send_package (void)
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
-  ui16_temp = motor_get_adc_battery_voltage_filtered ();
+  ui16_temp = motor_get_adc_battery_voltage_filtered_10b ();
   // battery voltage
   ui8_tx_buffer[1] = (ui16_temp & 0xff);
   ui8_tx_buffer[2] = ((uint8_t) (ui16_temp >> 4)) & 0x30;
@@ -198,8 +202,8 @@ void uart_send_package (void)
   // battery state of charge (SOC)
   ui8_tx_buffer[2] |= ui8_temp & 0x0f;
 
-  // battery current
-  ui8_tx_buffer[3] = (uint8_t) ((float) motor_get_adc_battery_current_filtered () * 0.875);
+  // battery current x5
+  ui8_tx_buffer[3] = (uint8_t) ((float) motor_get_adc_battery_current_filtered_10b () * 0.826);
 
   // wheel speed
   ui8_tx_buffer[4] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
@@ -262,30 +266,21 @@ static void ebike_control_motor (void)
 
 #elif (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE)
 
-  uint8_t ui8_temp;
   uint8_t ui16_temp;
-  float f_temp;
-//  uint16_t ui16_battery_voltage_filtered;
-//  uint16_t ui16_battery_current;
-//
-//  // calc battery voltage
-//  ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
-//  ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
-//
-//  // calc battery current
-//  ui16_battery_current = 0;
-//  if (ui8_target_battery_max_power_x10 > 0)
-//  {
-//    ui16_battery_current = ((uint16_t) ui8_target_battery_max_power_x10) / ui16_battery_voltage_filtered;
-//  }
+  float f_torque_sensor;
+  uint8_t ui8_torque_sensor;
+  uint8_t ui8_throttle;
+  uint16_t ui16_battery_voltage_filtered;
+  uint16_t ui16_max_battery_current;
+  uint8_t ui8_battery_target_current;
 
   // scale torque sensor signal using assist level
-  f_temp = ((float) ui8_torque_sensor_value_filtered) * f_get_assist_level ();
+  f_torque_sensor = ((float) ui8_torque_sensor_value_filtered) * f_get_assist_level ();
   // limit to max
-  if (f_temp > 255)
-    ui8_temp = 255;
+  if (f_torque_sensor > 255)
+    ui8_torque_sensor = 255;
   else
-    ui8_temp = (uint8_t) f_temp;
+    ui8_torque_sensor = (uint8_t) f_torque_sensor;
 
   // cadence percentage (in x256)
 //  ui16_temp = (((uint16_t) ui8_pas_cadence_rpm) << 8) / ((uint16_t) PAS_MAX_CADENCE_RPM);
@@ -294,26 +289,45 @@ static void ebike_control_motor (void)
   // do not apply human power with lower cadence
 //  if (ui8_pas_cadence_rpm > 25)
 //  {
-//    ui8_pedal_human_power = ((((uint16_t) ui8_temp) * ui16_temp) >> 8);
+//    ui8_pedal_human_power = ((((uint16_t) ui8_torque_sensor) * ui16_temp) >> 8);
 //  }
 //  else
 //  {
-    ui8_pedal_human_power = ui8_temp;
+    ui8_pedal_human_power = ui8_torque_sensor;
 //  }
 
   // use the value that is the max of both signals: throttle or torque sensor (human power)
-  ui8_temp = ui8_max (ui8_throttle_value_filtered, ui8_pedal_human_power);
+  ui8_throttle = ui8_max (ui8_throttle_value_filtered, ui8_pedal_human_power);
 
   // map previous value to battery current
-  ui8_temp = (uint8_t) (map ((uint32_t) ui8_temp,
+  ui8_battery_target_current = (uint8_t) (map ((uint32_t) ui8_throttle,
          (uint32_t) 0,
          (uint32_t) 255,
          (uint32_t) 0,
          (uint32_t) ADC_BATTERY_CURRENT_MAX));
-  ebike_app_battery_set_current_max (ui8_temp);
+
+  // now let's calc max battery current based on the target max power
+  // calc battery voltage
+  ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered_10b () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
+  ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
+
+  // calc max battery current
+  ui16_max_battery_current = 0;
+  if (lcd_configuration_variables.ui8_target_battery_max_power_div10 > 0)
+  {
+    // 1.6 = 1 / 0.625(each adc step for current)
+    // 1.6 * 10 = 16
+    ui16_max_battery_current = ((uint16_t) lcd_configuration_variables.ui8_target_battery_max_power_div10 * 16) / ui16_battery_voltage_filtered;
+  }
+
+  // now let's limit the target battery current to battery max current (use min value of both)
+  ui8_battery_target_current = ui8_min (ui8_battery_target_current, ui16_max_battery_current);
+  // finally set the target battery current to the current controller
+  ebike_app_set_target_adc_battery_max_current (ui8_battery_target_current);
 
   // set the target duty_cycle to max, as the battery current controller will manage it
-  if (ui8_temp > 0)
+  // if battery_target_current == 0, put duty_cycle at 0
+  if (ui8_battery_target_current > 0)
     motor_set_pwm_duty_cycle_target (255);
   else
     motor_set_pwm_duty_cycle_target (0);
@@ -321,9 +335,23 @@ static void ebike_control_motor (void)
 }
 
 // each 1 unit = 0.625 amps
-void ebike_app_battery_set_current_max (uint8_t ui8_value)
+void ebike_app_set_target_adc_battery_max_current (uint8_t ui8_value)
 {
-  ui8_adc_target_battery_current_max = ui8_adc_battery_current_offset + ui8_value;
+  // limit max number of amps
+  if (ui8_value > ui8_adc_battery_current_max)
+    ui8_value = ui8_adc_battery_current_max;
+
+  ui8_adc_target_battery_max_current = ui8_adc_battery_current_offset + ui8_value;
+}
+
+// in amps
+void ebike_app_set_battery_max_current (uint8_t ui8_value)
+{
+  // each 1 unit = 0.625 amps (0.625 * 256 = 160)
+  ui8_adc_battery_current_max = ((((uint16_t) ui8_value) << 8) / 160);
+
+  if (ui8_adc_battery_current_max > ADC_BATTERY_CURRENT_MAX)
+    ui8_adc_battery_current_max = ADC_BATTERY_CURRENT_MAX;
 }
 
 // This is the interrupt that happens when UART2 receives data. We need it to be the fastest possible and so

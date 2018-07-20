@@ -268,33 +268,34 @@ static void ebike_control_motor (void)
 
   uint8_t ui16_temp;
   float f_torque_sensor;
+  float f_temp;
   uint8_t ui8_torque_sensor;
   uint8_t ui8_throttle;
   uint16_t ui16_battery_voltage_filtered;
   uint16_t ui16_max_battery_current;
   uint8_t ui8_battery_target_current;
 
-  // scale torque sensor signal using assist level
-  f_torque_sensor = ((float) ui8_torque_sensor_value_filtered) * f_get_assist_level ();
-  // limit to max
-  if (f_torque_sensor > 255)
-    ui8_torque_sensor = 255;
-  else
-    ui8_torque_sensor = (uint8_t) f_torque_sensor;
-
   // cadence percentage (in x256)
-//  ui16_temp = (((uint16_t) ui8_pas_cadence_rpm) << 8) / ((uint16_t) PAS_MAX_CADENCE_RPM);
+  ui16_temp = (((uint16_t) ui8_pas_cadence_rpm) << 8) / ((uint16_t) PAS_MAX_CADENCE_RPM);
 
   // human power: pedal torque * pedal cadence
   // do not apply human power with lower cadence
-//  if (ui8_pas_cadence_rpm > 25)
-//  {
-//    ui8_pedal_human_power = ((((uint16_t) ui8_torque_sensor) * ui16_temp) >> 8);
-//  }
-//  else
-//  {
+  if (ui8_pas_cadence_rpm > 25)
+  {
+    // calc human power
+    ui8_pedal_human_power = ((((uint16_t) ui8_torque_sensor_value_filtered) * ui16_temp) >> 8);
+
+    // now scale human power with assist level
+    f_temp = ((float) ui8_pedal_human_power) * f_get_assist_level ();
+    if (f_temp > 255)
+      f_temp = 255;
+
+    ui8_pedal_human_power = (uint8_t) f_temp;
+  }
+  else
+  {
     ui8_pedal_human_power = ui8_torque_sensor;
-//  }
+  }
 
   // use the value that is the max of both signals: throttle or torque sensor (human power)
   ui8_throttle = ui8_max (ui8_throttle_value_filtered, ui8_pedal_human_power);

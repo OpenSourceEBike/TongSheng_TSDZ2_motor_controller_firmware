@@ -22,6 +22,7 @@
 #include "brake.h"
 #include "eeprom.h"
 #include "config.h"
+#include "utils.h"
 
 uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
@@ -53,15 +54,14 @@ volatile struct_lcd_configuration_variables lcd_configuration_variables;
 volatile uint8_t ui8_received_package_flag = 0;
 volatile uint8_t ui8_rx_buffer[8];
 volatile uint8_t ui8_rx_counter = 0;
-volatile uint8_t ui8_tx_buffer[19];
+volatile uint8_t ui8_tx_buffer[20];
 volatile uint8_t ui8_tx_counter = 0;
 volatile uint8_t ui8_i;
 volatile uint8_t ui8_checksum;
-volatile uint8_t ui8_checksum_1st_package;
-volatile uint8_t ui8_checksum_2nd_package;
 volatile uint8_t ui8_byte_received;
 volatile uint8_t ui8_state_machine = 0;
 volatile uint8_t ui8_uart_received_first_package = 0;
+static uint16_t ui16_crc_tx;
 
 // function prototypes
 static void ebike_control_motor (void);
@@ -243,16 +243,17 @@ void uart_send_package (void)
   // FOC angle
   ui8_tx_buffer[17] = ui8_foc_angle;
 
-  // prepare checksum of the package
-  ui8_checksum = 0;
+  // prepare crc of the package
+  ui16_crc_tx = 0xffff;
   for (ui8_i = 0; ui8_i <= 17; ui8_i++)
   {
-    ui8_checksum += ui8_tx_buffer[ui8_i];
+    crc16 (ui8_tx_buffer[ui8_i], &ui16_crc_tx);
   }
-  ui8_tx_buffer[18] = ui8_checksum;
+  ui8_tx_buffer[18] = (uint8_t) (ui16_crc_tx & 0xff);
+  ui8_tx_buffer[19] = (uint8_t) (ui16_crc_tx >> 8) & 0xff;
 
   // send the full package to UART
-  for (ui8_i = 0; ui8_i <= 18; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 19; ui8_i++)
   {
     putchar (ui8_tx_buffer[ui8_i]);
   }
@@ -294,7 +295,7 @@ static void ebike_control_motor (void)
   }
   else
   {
-    ui8_pedal_human_power = ui8_torque_sensor;
+    ui8_pedal_human_power = ui8_torque_sensor_value_filtered;
   }
 
   // use the value that is the max of both signals: throttle or torque sensor (human power)

@@ -23,4 +23,4 @@ StdPeriphLib/src/*.rel
 StdPeriphLib/src/*.rst
 StdPeriphLib/src/*.sym
 Debug
-StdPeriphLib/src/
+

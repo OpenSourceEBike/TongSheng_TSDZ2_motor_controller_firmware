@@ -20,8 +20,6 @@ static void adc_trigger (void);
 void adc_init (void)
 {
   uint16_t ui16_counter;
-  uint16_t ui16_adc_throttle_offset;
-  uint16_t ui16_adc_torque_sensor_offset;
   uint16_t ui16_adc_battery_current_offset;
   uint8_t ui8_i;
 

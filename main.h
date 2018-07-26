@@ -13,14 +13,6 @@
 
 //#define DEBUG_UART
 
-// *************************************************************************** //
-// Throotle and PAS
-
-#define EBIKE_THROTTLE_TYPE_TORQUE_SENSOR_AND_THROTTLE		1
-#define EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE              2
-#define EBIKE_THROTTLE_TYPE_THROTTLE_ONLY                 3
-// *************************************************************************** //
-
 #define PWM_CYCLES_COUNTER_MAX 3125 // 5 erps minimum speed; 1/5 = 200ms; 200ms/64us = 3125
 
 #define PWM_CYCLES_SECOND 15625L // 1 / 64us(PWM period)
@@ -98,24 +90,14 @@
 // 0.344 per ADC_8bits step: 17.9V --> ADC_8bits = 52; 40V --> ADC_8bits = 116; this signal atenuated by the opamp 358
 #define ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512 44
 #define ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X256 (ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512 >> 1)
-#define ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP 0.344
+#define ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP_INVERSE_X256 (ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X256 << 2)
 
 // ADC Battery current
 // 1A per 5 steps of ADC_10bits
 #define ADC_BATTERY_CURRENT_PER_ADC_STEP_X512 102
 
-#define COMMUNICATIONS_BATTERY_VOLTAGE  (uint8_t) (((float) BATTERY_LI_ION_CELLS_NUMBER) * 3.45) // example: 7S battery, should be = 24
-#define ADC_BATTERY_VOLTAGE_MAX   (uint8_t) ((float) (BATTERY_LI_ION_CELLS_NUMBER * LI_ION_CELL_VOLTS_MAX) / ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP)
-#define ADC_BATTERY_VOLTAGE_10    (uint8_t) ((float) (BATTERY_LI_ION_CELLS_NUMBER * LI_ION_CELL_VOLTS_10)  / ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP)
-#define ADC_BATTERY_VOLTAGE_MIN   (uint8_t) ((float) (BATTERY_LI_ION_CELLS_NUMBER * LI_ION_CELL_VOLTS_0) / ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP)
 
-#define BATTERY_PACK_VOLTS_100_X256  ((float) LI_ION_CELL_VOLTS_100 * (BATTERY_LI_ION_CELLS_NUMBER << 8))
-#define BATTERY_PACK_VOLTS_80_X256   ((float) LI_ION_CELL_VOLTS_80  * (BATTERY_LI_ION_CELLS_NUMBER << 8))
-#define BATTERY_PACK_VOLTS_60_X256   ((float) LI_ION_CELL_VOLTS_60  * (BATTERY_LI_ION_CELLS_NUMBER << 8))
-#define BATTERY_PACK_VOLTS_40_X256   ((float) LI_ION_CELL_VOLTS_40  * (BATTERY_LI_ION_CELLS_NUMBER << 8))
-#define BATTERY_PACK_VOLTS_20_X256   ((float) LI_ION_CELL_VOLTS_20  * (BATTERY_LI_ION_CELLS_NUMBER << 8))
-#define BATTERY_PACK_VOLTS_10_X256   ((float) LI_ION_CELL_VOLTS_10  * (BATTERY_LI_ION_CELLS_NUMBER << 8))
-#define BATTERY_PACK_VOLTS_0_X256    ((float) LI_ION_CELL_VOLTS_0   * (BATTERY_LI_ION_CELLS_NUMBER << 8))
+#define ADC_BATTERY_VOLTAGE_MIN   (uint8_t) ((float) (BATTERY_LI_ION_CELLS_NUMBER * LI_ION_CELL_VOLTS_0) / ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP)
 
 // Possible values: 0, 1, 2, 3, 4, 5, 6
 // 0 equal to no filtering and no delay, higher values will increase filtering but will also add bigger delay

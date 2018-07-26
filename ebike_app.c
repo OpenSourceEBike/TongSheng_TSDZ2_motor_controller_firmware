@@ -52,7 +52,7 @@ volatile struct_lcd_configuration_variables lcd_configuration_variables;
 
 // UART
 volatile uint8_t ui8_received_package_flag = 0;
-volatile uint8_t ui8_rx_buffer[8];
+volatile uint8_t ui8_rx_buffer[11];
 volatile uint8_t ui8_rx_counter = 0;
 volatile uint8_t ui8_tx_buffer[20];
 volatile uint8_t ui8_tx_counter = 0;
@@ -61,6 +61,7 @@ volatile uint8_t ui8_checksum;
 volatile uint8_t ui8_byte_received;
 volatile uint8_t ui8_state_machine = 0;
 volatile uint8_t ui8_uart_received_first_package = 0;
+static uint16_t ui16_crc_rx;
 static uint16_t ui16_crc_tx;
 
 // function prototypes
@@ -132,19 +133,21 @@ void ebike_app_controller (void)
 
 void communications_controller (void)
 {
+  uint16_t ui16_battery_low_voltage_cut_off_x10;
+  uint32_t ui32_temp;
+
 #ifndef DEBUG_UART
   if (ui8_received_package_flag)
   {
-    // validation of the package data
-    // last byte is the checksum
-    ui8_checksum = 0;
-    for (ui8_i = 0; ui8_i <= 6; ui8_i++)
+    // verify crc of the package
+    ui16_crc_rx = 0xffff;
+    for (ui8_i = 0; ui8_i <= 8; ui8_i++)
     {
-      ui8_checksum += ui8_rx_buffer[ui8_i];
+      crc16 (ui8_rx_buffer[ui8_i], &ui16_crc_rx);
     }
 
     // see if checksum is ok...
-    if (ui8_rx_buffer [7] == ui8_checksum)
+    if (((((uint16_t) ui8_rx_buffer [10]) << 8) + ((uint16_t) ui8_rx_buffer [9])) == ui16_crc_rx)
     {
       // assist level
       lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 0x0f;
@@ -152,14 +155,20 @@ void communications_controller (void)
       lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
       // walk assist
       lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
+      // battery low voltage cut-off
+      ui16_battery_low_voltage_cut_off_x10 = (((uint16_t) ui8_rx_buffer [3]) << 8) + ((uint16_t) ui8_rx_buffer [2]);
+      ui32_temp = ((uint32_t) ui16_battery_low_voltage_cut_off_x10 << 8) / ((uint32_t) ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP_INVERSE_X256);
+      ui32_temp /= 10;
+      motor_set_adc_battery_voltage_cut_off ((uint8_t) ui32_temp);
+
       // battery max current
-      ebike_app_set_battery_max_current ( ui8_rx_buffer [2]);
+      ebike_app_set_battery_max_current ( ui8_rx_buffer [4]);
       // target battery max power
-      lcd_configuration_variables.ui8_target_battery_max_power_div10 = ui8_rx_buffer [3];
+      lcd_configuration_variables.ui8_target_battery_max_power_div10 = ui8_rx_buffer [5];
       // wheel perimeter
-      lcd_configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [5]) << 8) + ((uint16_t) ui8_rx_buffer [4]);
+      lcd_configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [7]) << 8) + ((uint16_t) ui8_rx_buffer [6]);
       // wheel max speed
-      lcd_configuration_variables.ui8_wheel_max_speed = ui8_rx_buffer [6];
+      lcd_configuration_variables.ui8_wheel_max_speed = ui8_rx_buffer [8];
 
       // signal that we processed the full package
       ui8_received_package_flag = 0;
@@ -178,29 +187,15 @@ void communications_controller (void)
 void uart_send_package (void)
 {
   uint16_t ui16_temp;
-  uint16_t ui16_battery_volts_x256;
-  uint16_t ui8_temp;
 
   //send the data to the LCD
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
   ui16_temp = motor_get_adc_battery_voltage_filtered_10b ();
-  // battery voltage
+  // adc 10 bits battery voltage
   ui8_tx_buffer[1] = (ui16_temp & 0xff);
   ui8_tx_buffer[2] = ((uint8_t) (ui16_temp >> 4)) & 0x30;
-
-  // calc battery pack state of charge (SOC)
-  ui16_battery_volts_x256 = ((uint16_t) ui16_temp) * ((uint16_t) ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X256);
-  if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_80_X256)) { ui8_temp = 5; } // 4 bars | full
-  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_60_X256)) { ui8_temp = 4; } // 3 bars
-  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_40_X256)) { ui8_temp = 3; } // 2 bars
-  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_20_X256  )) { ui8_temp = 2; } // 1 bar
-  else if (ui16_battery_volts_x256 > ((uint16_t) BATTERY_PACK_VOLTS_10_X256  )) { ui8_temp = 1; } // empty
-  else { ui8_temp = 0; } // flashing
-
-  // battery state of charge (SOC)
-  ui8_tx_buffer[2] |= ui8_temp & 0x0f;
 
   // battery current x5
   ui8_tx_buffer[3] = (uint8_t) ((float) motor_get_adc_battery_current_filtered_10b () * 0.826);
@@ -239,7 +234,7 @@ void uart_send_package (void)
   // motor speed in ERPS
   ui16_temp = ui16_motor_get_motor_speed_erps(),
   ui8_tx_buffer[15] = (uint8_t) (ui16_temp & 0xff);
-  ui8_tx_buffer[16] = (uint8_t) (ui16_temp >> 8) & 0xff;
+  ui8_tx_buffer[16] = (uint8_t) (ui16_temp >> 8);
   // FOC angle
   ui8_tx_buffer[17] = ui8_foc_angle;
 
@@ -261,16 +256,8 @@ void uart_send_package (void)
 
 static void ebike_control_motor (void)
 {
-#if (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_THROTTLE_ONLY)
-
-  motor_set_pwm_duty_cycle_target (ui8_torque_sensor_throttle_value_filtered);
-
-#elif (EBIKE_THROTTLE_TYPE == EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE)
-
   uint8_t ui16_temp;
-  float f_torque_sensor;
   float f_temp;
-  uint8_t ui8_torque_sensor;
   uint8_t ui8_throttle;
   uint16_t ui16_battery_voltage_filtered;
   uint16_t ui16_max_battery_current;
@@ -333,7 +320,6 @@ static void ebike_control_motor (void)
     motor_set_pwm_duty_cycle_target (255);
   else
     motor_set_pwm_duty_cycle_target (0);
-#endif
 }
 
 // each 1 unit = 0.625 amps
@@ -388,7 +374,7 @@ void UART2_IRQHandler(void) __interrupt(UART2_IRQHANDLER)
       ui8_rx_counter++;
 
       // see if is the last byte of the package
-      if (ui8_rx_counter > 7)
+      if (ui8_rx_counter > 10)
       {
         ui8_rx_counter = 0;
         ui8_state_machine = 0;

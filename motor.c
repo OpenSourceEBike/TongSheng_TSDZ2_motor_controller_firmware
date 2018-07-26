@@ -385,6 +385,7 @@ uint16_t ui16_value;
 
 uint8_t ui8_first_time_run_flag = 1;
 
+volatile uint8_t ui8_adc_battery_voltage_cut_off = 0xff; // safe value so controller will not discharge the battery if not receiving a lower value from the LCD
 uint16_t ui16_adc_battery_voltage_accumulated = 0;
 uint16_t ui16_adc_battery_voltage_filtered_10b;
 
@@ -634,7 +635,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   {
     ui8_current_controller_flag = 0;
   }
-  else if (UI8_ADC_BATTERY_VOLTAGE < ((uint8_t) ADC_BATTERY_VOLTAGE_MIN)) // battery voltage under min voltage, reduce duty_cycle
+  else if (UI8_ADC_BATTERY_VOLTAGE < ui8_adc_battery_voltage_cut_off) // battery voltage under min voltage, reduce duty_cycle
   {
     if (ui8_duty_cycle > 0)
     {
@@ -1046,4 +1047,9 @@ uint8_t motor_get_adc_battery_current_filtered_10b (void)
 uint16_t motor_get_adc_battery_voltage_filtered_10b (void)
 {
   return ui16_adc_battery_voltage_filtered_10b;
+}
+
+void motor_set_adc_battery_voltage_cut_off (uint8_t ui8_value)
+{
+  ui8_adc_battery_voltage_cut_off = ui8_value;
 }

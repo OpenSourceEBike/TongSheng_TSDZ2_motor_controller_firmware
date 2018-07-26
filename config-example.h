@@ -16,11 +16,6 @@
 // *************************************************************************** //
 // THROTTLE
 //
-// choose between following modes. You can choose for instance TORQUE_SENSOR_AND_THROTTLE and if you have
-// throttle connected, the output signal used to control the motor will be the max value of both torque sensor or throttle
-#define EBIKE_THROTTLE_TYPE	EBIKE_THROTTLE_TYPE_TORQUE_SENSOR_AND_THROTTLE
-//#define EBIKE_THROTTLE_TYPE	EBIKE_THROTTLE_TYPE_PAS_AND_THROTTLE
-//#define EBIKE_THROTTLE_TYPE EBIKE_THROTTLE_TYPE_THROTTLE_ONLY
 
 // next, choose one of the both (only apply to throttle and/or PAS)
 //#define EBIKE_THROTTLE_TYPE_THROTTLE_PAS_PWM_DUTY_CYCLE // direct PWM duty_cycle control, important for developers

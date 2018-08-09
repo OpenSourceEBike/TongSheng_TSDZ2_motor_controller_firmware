@@ -113,4 +113,5 @@ clean:
 	@rm -rf *.elf
 	@rm -rf main.bin
 	@rm -rf *.ihx
+	@rm -rf *.hex
 	@echo "Done."

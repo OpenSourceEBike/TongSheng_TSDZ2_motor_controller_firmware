@@ -22,7 +22,7 @@ typedef struct _lcd_configuration_variables
 {
   uint16_t ui16_wheel_perimeter;
   uint8_t ui8_assist_level;
-  uint8_t ui8_head_light;
+  uint8_t ui8_lights;
   uint8_t ui8_walk_assist;
   uint8_t ui8_wheel_max_speed;
   uint8_t ui8_target_battery_max_power_div10;

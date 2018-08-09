@@ -59,6 +59,8 @@
  *
  * PE6  (ADC_AIN9)    | in  | this signal goes to a pad of a resistor that is not assembled. If was assembled, it would measure the opamp output value related to AIN4.
  *
+ * PE2                | out  | lights output
+ *
  * PE1  ??
  * PD1  ??
  *

@@ -23,6 +23,7 @@
 #include "eeprom.h"
 #include "config.h"
 #include "utils.h"
+#include "lights.h"
 
 uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
@@ -151,8 +152,10 @@ void communications_controller (void)
     {
       // assist level
       lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 0x0f;
-      // head light
-      lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
+      // lights
+      lcd_configuration_variables.ui8_lights = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
+      lights_set_state (lcd_configuration_variables.ui8_lights);
+
       // walk assist
       lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
       // battery low voltage cut-off

@@ -21,6 +21,7 @@
 #include "timers.h"
 #include "ebike_app.h"
 #include "torque_sensor.h"
+#include "lights.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //// Functions prototypes
@@ -75,6 +76,7 @@ int main (void)
   pas_init ();
   wheel_speed_sensor_init ();
   hall_sensor_init ();
+  lights_init ();
   pwm_init_bipolar_4q ();
   motor_init ();
   ebike_app_init ();

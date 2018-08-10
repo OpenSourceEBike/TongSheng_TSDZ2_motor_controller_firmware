@@ -155,7 +155,6 @@ void communications_controller (void)
       // lights
       lcd_configuration_variables.ui8_lights = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
       lights_set_state (lcd_configuration_variables.ui8_lights);
-
       // walk assist
       lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
       // battery low voltage cut-off

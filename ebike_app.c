@@ -265,6 +265,11 @@ static void ebike_control_motor (void)
 
   // cadence percentage (in x256)
   ui16_temp = (((uint16_t) ui8_pas_cadence_rpm) << 8) / ((uint16_t) PAS_MAX_CADENCE_RPM);
+  // limit the calculated value to be no more than PAS_MAX_CADENCE_RPM x256
+  if (ui8_pas_cadence_rpm > PAS_MAX_CADENCE_RPM)
+  {
+    ui16_temp = ((uint16_t) PAS_MAX_CADENCE_RPM) << 8;
+  }
 
   // human power: pedal torque * pedal cadence
   // do not apply human power with lower cadence

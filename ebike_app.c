@@ -24,6 +24,10 @@
 #include "config.h"
 #include "utils.h"
 
+#define STATE_NO_PEDALLING        0
+#define STATE_STARTUP_PEDALLING   1
+#define STATE_PEDALLING           2
+
 uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
 
@@ -64,6 +68,9 @@ volatile uint8_t ui8_uart_received_first_package = 0;
 static uint16_t ui16_crc_rx;
 static uint16_t ui16_crc_tx;
 
+uint8_t ui8_tstr_state_machine = STATE_NO_PEDALLING;
+uint8_t ui8_rtst_counter = 0;
+
 // function prototypes
 static void ebike_control_motor (void);
 void ebike_app_set_battery_max_current (uint8_t ui8_value);
@@ -99,6 +106,51 @@ void torque_sensor_read (void)
       (uint8_t) ui8_adc_torque_sensor_max_value,
       (uint8_t) 0,
       (uint8_t) 255));
+
+  switch (ui8_tstr_state_machine)
+  {
+    // ebike is stopped, wait for throttle signal
+    case STATE_NO_PEDALLING:
+    if ((ui8_torque_sensor > 0) &&
+        (!brake_is_set()))
+    {
+      ui8_tstr_state_machine = STATE_STARTUP_PEDALLING;
+    }
+    break;
+
+    // now count 5 seconds
+    case STATE_STARTUP_PEDALLING:
+    if (ui8_rtst_counter++ > 50) // 5 seconds
+    {
+      ui8_rtst_counter = 0;
+      ui8_tstr_state_machine = STATE_PEDALLING;
+    }
+
+    // ebike is not moving, let's return to begin
+    if (ui16_wheel_speed_x10 == 0)
+    {
+      ui8_rtst_counter = 0;
+      ui8_tstr_state_machine = 0;
+    }
+    break;
+
+    // wait on this state and reset when ebike stops
+    case STATE_PEDALLING:
+    if (ui16_wheel_speed_x10 == 0)
+    {
+      ui8_tstr_state_machine = STATE_NO_PEDALLING;
+    }
+    break;
+
+    default:
+    break;
+  }
+
+  // bike is moving but user doesn't pedal, disable torque sensor signal because user can be resting the feet on the pedals
+  if ((ui8_tstr_state_machine == STATE_PEDALLING) && (ui8_pas_cadence_rpm == 0))
+  {
+    ui8_torque_sensor = 0;
+  }
 }
 
 void throttle_read (void)

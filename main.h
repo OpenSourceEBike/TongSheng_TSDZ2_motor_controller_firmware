@@ -43,7 +43,7 @@
 // 0 equal to no filtering and no delay, higher values will increase filtering but will also add bigger delay
 #define THROTTLE_FILTER_COEFFICIENT     1
 #define ADC_THROTTLE_THRESHOLD          10 // value in ADC 8 bits step
-#define ADC_TORQUE_SENSOR_THRESHOLD     10 // value in ADC 8 bits step
+#define ADC_TORQUE_SENSOR_THRESHOLD     6 // value in ADC 8 bits step
 
 #define CRUISE_CONTROL_MIN      20
 
@@ -51,8 +51,6 @@
 // each ADC 8 bits step = (5V / 256) = 0.0195
 #define ADC_THROTTLE_MIN_VALUE 47
 #define ADC_THROTTLE_MAX_VALUE 176
-#define ADC_TORQUE_SENSOR_MIN_VALUE 52
-#define ADC_TORQUE_SENSOR_MAX_VALUE 84
 
 // *************************************************************************** //
 // PAS

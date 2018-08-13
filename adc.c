@@ -21,6 +21,7 @@ void adc_init (void)
 {
   uint16_t ui16_counter;
   uint16_t ui16_adc_battery_current_offset;
+  uint16_t ui16_adc_torque_sensor_offset;
   uint8_t ui8_i;
 
   //init GPIO for the used ADC pins
@@ -45,7 +46,7 @@ void adc_init (void)
   // next code is for "calibrating" the offset value of some ADC channels
 
   // read and discard few samples of ADC, to make sure the next samples are ok
-  for (ui8_i = 0; ui8_i < 64; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 64; ui8_i++)
   {
     ui16_counter = TIM3_GetCounter () + 10; // delay ~10ms
     while (TIM3_GetCounter () < ui16_counter) ; // delay ~10ms
@@ -55,7 +56,7 @@ void adc_init (void)
 
   // read and average a few values of ADC battery current
   ui16_adc_battery_current_offset = 0;
-  for (ui8_i = 0; ui8_i < 16; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 16; ui8_i++)
   {
     ui16_counter = TIM3_GetCounter () + 10; // delay ~10ms
     while (TIM3_GetCounter () < ui16_counter) ; // delay ~10ms
@@ -66,6 +67,21 @@ void adc_init (void)
   ui16_adc_battery_current_offset >>= 4;
   ui8_adc_battery_current_offset = ui16_adc_battery_current_offset >> 2;
   ui8_adc_motor_phase_current_offset = ui8_adc_battery_current_offset;
+
+  // read and average a few values of ADC torque sensor
+  ui16_adc_torque_sensor_offset = 0;
+  for (ui8_i = 0; ui8_i <= 16; ui8_i++)
+  {
+    ui16_counter = TIM3_GetCounter () + 10; // delay ~10ms
+    while (TIM3_GetCounter () < ui16_counter) ; // delay ~10ms
+    adc_trigger ();
+    while (!ADC1_GetFlagStatus (ADC1_FLAG_EOC)) ; // wait for end of conversion
+    ui16_adc_torque_sensor_offset += UI8_ADC_TORQUE_SENSOR;
+  }
+  ui16_adc_torque_sensor_offset >>= 4;
+
+  ui8_adc_torque_sensor_min_value = ((uint8_t) ui16_adc_torque_sensor_offset) + ADC_TORQUE_SENSOR_THRESHOLD;
+  ui8_adc_torque_sensor_max_value = ui8_adc_torque_sensor_min_value + 32;
 }
 
 static void adc_trigger (void)

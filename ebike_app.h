@@ -28,7 +28,8 @@ typedef struct _lcd_configuration_variables
   uint8_t ui8_target_battery_max_power_div10;
 } struct_lcd_configuration_variables;
 
-extern volatile uint8_t ui8_throttle_value;
+extern volatile uint8_t ui8_adc_torque_sensor_min_value;
+extern volatile uint8_t ui8_adc_torque_sensor_max_value;
 extern volatile uint8_t ui8_adc_battery_current_offset;
 extern volatile uint8_t ui8_ebike_app_state;
 extern volatile uint8_t ui8_adc_target_battery_max_current;

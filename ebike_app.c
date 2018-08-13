@@ -333,10 +333,17 @@ static void ebike_control_motor (void)
 
     ui8_pedal_human_power = (uint8_t) f_temp;
   }
+#if (MOTOR_ASSISTANCE_CAN_START_WITHOUT_PEDAL_ROTATION == 1)
   else
   {
     ui8_pedal_human_power = ui8_torque_sensor;
   }
+#else
+  else
+  {
+    ui8_pedal_human_power = 0;
+  }
+#endif
 
   // use the value that is the max of both signals: throttle or torque sensor (human power)
   ui8_throttle_value = ui8_max (ui8_throttle, ui8_pedal_human_power);

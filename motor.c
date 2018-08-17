@@ -405,6 +405,7 @@ volatile uint8_t ui8_adc_motor_phase_current_offset;
 
 uint8_t ui8_pas_state;
 uint8_t ui8_pas_state_old;
+volatile uint8_t ui8_pas_magnets_ticks;
 uint16_t ui16_pas_counter = (uint16_t) PAS_ABSOLUTE_MIN_CADENCE_PWM_CYCLE_TICKS;
 
 volatile uint16_t ui16_torque_sensor_throttle_processed_value = 0;
@@ -762,6 +763,8 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
      // consider only when PAS signal transition from 0 to 1
      if (ui8_pas_state == 1)
      {
+       ui8_pas_magnets_ticks++;
+
        // limit PAS cadence to be less than PAS_ABSOLUTE_MAX_CADENCE_PWM_CYCLE_TICKS
        // also PAS cadence should be zero if rotating backwards
        if ((ui16_pas_counter < ((uint16_t) PAS_ABSOLUTE_MAX_CADENCE_PWM_CYCLE_TICKS)) ||

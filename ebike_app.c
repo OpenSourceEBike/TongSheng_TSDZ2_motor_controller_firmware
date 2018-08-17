@@ -284,7 +284,8 @@ void uart_send_package (void)
   ui8_tx_buffer[15] = (uint8_t) (ui16_temp & 0xff);
   ui8_tx_buffer[16] = (uint8_t) (ui16_temp >> 8);
   // FOC angle
-  ui8_tx_buffer[17] = ui8_foc_angle;
+//  ui8_tx_buffer[17] = ui8_foc_angle;
+  ui8_tx_buffer[17] = ui8_pas_magnets_ticks;
 
   // prepare crc of the package
   ui16_crc_tx = 0xffff;

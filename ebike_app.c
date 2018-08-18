@@ -339,6 +339,10 @@ static void ebike_control_motor (void)
     ui8_pedal_human_power = ui8_torque_sensor;
   }
 #else
+  else if (ui8_pas_cadence_rpm > 6)
+  {
+    ui8_pedal_human_power = ui8_torque_sensor;
+  }
   else
   {
     ui8_pedal_human_power = 0;

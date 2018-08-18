@@ -54,7 +54,7 @@
 
 // *************************************************************************** //
 // PAS
-#define PAS_NUMBER_MAGNETS  24
+#define PAS_NUMBER_MAGNETS  20 // PAS_NUMBER_MAGNETS = 20 was validated on August 2018 by Casainho e jbalat
 
 #define PAS_THRESHOLD 1.7
 

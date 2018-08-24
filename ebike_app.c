@@ -52,11 +52,11 @@ uint8_t ui8_wheel_speed_max = 0;
 float f_wheel_speed_x10;
 uint16_t ui16_wheel_speed_x10;
 
-volatile struct_lcd_configuration_variables lcd_configuration_variables;
+volatile struct_configuration_variables configuration_variables;
 
 // UART
 volatile uint8_t ui8_received_package_flag = 0;
-volatile uint8_t ui8_rx_buffer[11];
+volatile uint8_t ui8_rx_buffer[9];
 volatile uint8_t ui8_rx_counter = 0;
 volatile uint8_t ui8_tx_buffer[20];
 volatile uint8_t ui8_tx_counter = 0;
@@ -166,6 +166,8 @@ void throttle_read (void)
 
 void ebike_app_init (void)
 {
+  // init variables with the stored value on EEPROM
+  eeprom_init_variables ();
   ebike_app_set_battery_max_current (ADC_BATTERY_CURRENT_MAX);
 }
 
@@ -181,7 +183,6 @@ void ebike_app_controller (void)
 
 void communications_controller (void)
 {
-  uint16_t ui16_battery_low_voltage_cut_off_x10;
   uint32_t ui32_temp;
 
 #ifndef DEBUG_UART
@@ -189,34 +190,58 @@ void communications_controller (void)
   {
     // verify crc of the package
     ui16_crc_rx = 0xffff;
-    for (ui8_i = 0; ui8_i <= 8; ui8_i++)
+    for (ui8_i = 0; ui8_i <= 6; ui8_i++)
     {
       crc16 (ui8_rx_buffer[ui8_i], &ui16_crc_rx);
     }
 
     // see if checksum is ok...
-    if (((((uint16_t) ui8_rx_buffer [10]) << 8) + ((uint16_t) ui8_rx_buffer [9])) == ui16_crc_rx)
+    if (((((uint16_t) ui8_rx_buffer [8]) << 8) + ((uint16_t) ui8_rx_buffer [7])) == ui16_crc_rx)
     {
       // assist level
-      lcd_configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 0x0f;
+      configuration_variables.ui8_assist_level = ui8_rx_buffer [1] & 0x0f;
       // head light
-      lcd_configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
+      configuration_variables.ui8_head_light = (ui8_rx_buffer [1] & (1 << 4)) ? 1: 0;
       // walk assist
-      lcd_configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
-      // battery low voltage cut-off
-      ui16_battery_low_voltage_cut_off_x10 = (((uint16_t) ui8_rx_buffer [3]) << 8) + ((uint16_t) ui8_rx_buffer [2]);
-      ui32_temp = ((uint32_t) ui16_battery_low_voltage_cut_off_x10 << 8) / ((uint32_t) ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP_INVERSE_X256);
-      ui32_temp /= 10;
-      motor_set_adc_battery_voltage_cut_off ((uint8_t) ui32_temp);
-
+      configuration_variables.ui8_walk_assist = (ui8_rx_buffer [1] & (1 << 5)) ? 1: 0;
       // battery max current
-      ebike_app_set_battery_max_current ( ui8_rx_buffer [4]);
+      configuration_variables.ui8_battery_max_current = ui8_rx_buffer [2];
+      ebike_app_set_battery_max_current (configuration_variables.ui8_battery_max_current);
       // target battery max power
-      lcd_configuration_variables.ui8_target_battery_max_power_div10 = ui8_rx_buffer [5];
-      // wheel perimeter
-      lcd_configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [7]) << 8) + ((uint16_t) ui8_rx_buffer [6]);
-      // wheel max speed
-      lcd_configuration_variables.ui8_wheel_max_speed = ui8_rx_buffer [8];
+      configuration_variables.ui8_target_battery_max_power_div10 = ui8_rx_buffer [3];
+      // now get a variable ID for each package sent
+      switch (ui8_rx_buffer [4])
+      {
+        case 0:
+          // battery low voltage cut-off
+          configuration_variables.ui16_battery_low_voltage_cut_off_x10 = (((uint16_t) ui8_rx_buffer [6]) << 8) + ((uint16_t) ui8_rx_buffer [5]);
+          // calc the value in ADC steps and set it up
+          ui32_temp = ((uint32_t) configuration_variables.ui16_battery_low_voltage_cut_off_x10 << 8) / ((uint32_t) ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP_INVERSE_X256);
+          ui32_temp /= 10;
+          motor_set_adc_battery_voltage_cut_off ((uint8_t) ui32_temp);
+        break;
+
+        case 1:
+          // wheel perimeter
+          configuration_variables.ui16_wheel_perimeter = (((uint16_t) ui8_rx_buffer [6]) << 8) + ((uint16_t) ui8_rx_buffer [5]);
+        break;
+
+        case 2:
+          // wheel max speed
+          configuration_variables.ui8_wheel_max_speed = ui8_rx_buffer [5];
+          // PAS_MAX_CADENCE_RPM
+          configuration_variables.ui8_pas_max_cadence = ui8_rx_buffer [6];
+        break;
+
+        case 3:
+          configuration_variables.ui8_cruise_control = ui8_rx_buffer [5] & 1;
+          configuration_variables.ui8_motor_voltage_type = (ui8_rx_buffer [5] & 2) >> 1;
+          configuration_variables.ui8_motor_assistance_startup_config = (ui8_rx_buffer [5] & 4) >> 2;
+        break;
+      }
+
+      // verify if any configuration_variables did change and if so, save all of them in the EEPROM
+      eeprom_write_if_values_changed ();
 
       // signal that we processed the full package
       ui8_received_package_flag = 0;
@@ -366,11 +391,11 @@ static void ebike_control_motor (void)
 
   // calc max battery current
   ui16_max_battery_current = 0;
-  if (lcd_configuration_variables.ui8_target_battery_max_power_div10 > 0)
+  if (configuration_variables.ui8_target_battery_max_power_div10 > 0)
   {
     // 1.6 = 1 / 0.625(each adc step for current)
     // 1.6 * 10 = 16
-    ui16_max_battery_current = ((uint16_t) lcd_configuration_variables.ui8_target_battery_max_power_div10 * 16) / ui16_battery_voltage_filtered;
+    ui16_max_battery_current = ((uint16_t) configuration_variables.ui8_target_battery_max_power_div10 * 16) / ui16_battery_voltage_filtered;
   }
 
   // now let's limit the target battery current to battery max current (use min value of both)
@@ -459,7 +484,7 @@ void calc_wheel_speed (void)
   if (ui16_wheel_speed_sensor_pwm_cycles_ticks < WHEEL_SPEED_SENSOR_MIN_PWM_CYCLE_TICKS)
   {
     f_wheel_speed_x10 = ((float) PWM_CYCLES_SECOND) / ((float) ui16_wheel_speed_sensor_pwm_cycles_ticks); // rps
-    f_wheel_speed_x10 *= lcd_configuration_variables.ui16_wheel_perimeter; // millimeters per second
+    f_wheel_speed_x10 *= configuration_variables.ui16_wheel_perimeter; // millimeters per second
     f_wheel_speed_x10 *= 0.036; // ((3600 / (1000 * 1000)) * 10) kms per hour * 10
     ui16_wheel_speed_x10 = (uint16_t) f_wheel_speed_x10;
   }
@@ -473,7 +498,7 @@ float f_get_assist_level ()
 {
   float f_temp;
 
-  switch (lcd_configuration_variables.ui8_assist_level)
+  switch (configuration_variables.ui8_assist_level)
   {
     case 0:
     f_temp = ASSIST_LEVEL_0;
@@ -505,4 +530,9 @@ float f_get_assist_level ()
   }
 
   return f_temp;
+}
+
+struct_configuration_variables* get_configuration_variables (void)
+{
+  return &configuration_variables;
 }

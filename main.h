@@ -28,10 +28,6 @@
 #define MOTOR_ROTOR_ANGLE_330   (233 + MOTOR_ROTOR_OFFSET_ANGLE)
 #define MOTOR_ROTOR_ANGLE_30    (20  + MOTOR_ROTOR_OFFSET_ANGLE)
 
-// this value of 174 (244 degrees; 170 would be 239 degrees) was found experimentaly
-// seems to be about 180 + 60 degrees; were I expected to be 180 degrees
-#define MOTOR_ROTOR_ANGLE_FOC   (174 + MOTOR_ROTOR_OFFSET_ANGLE)
-
 #define MOTOR_OVER_SPEED_ERPS 520 // motor max speed, protection max value | 30 points for the sinewave at max speed
 
 #define WHEEL_SPEED_PI_CONTROLLER_KP_DIVIDEND	100
@@ -72,12 +68,16 @@
 
 // *************************************************************************** //
 // EEPROM memory variables default values
-#define DEFAULT_VALUE_ASSIST_LEVEL              2
-#define DEFAULT_VALUE_MOTOR_CHARACTARISTIC      202 // for Q85 motor (12.6 * 16)
-#define DEFAULT_VALUE_WHEEL_SIZE                20 // 26''
-#define DEFAULT_VALUE_MAX_SPEED                 25
-#define DEFAULT_VALUE_POWER_ASSIST_CONTROL_MODE 1
-#define DEFAULT_VALUE_CONTROLLER_MAX_CURRENT    10
+#define DEFAULT_VALUE_ASSIST_LEVEL                      2
+#define DEFAULT_VALUE_BATTERY_MAX_CURRENT               10 // 10 amps
+#define DEFAULT_VALUE_TARGET_BATTERY_MAX_POWER_X10      50 // 500 watts
+#define DEFAULT_VALUE_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_0 134 // 48v battery, LVC = 39.0 (3.0 * 13): (134 + (1 << 8))
+#define DEFAULT_VALUE_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_1 1
+#define DEFAULT_VALUE_WHEEL_PERIMETER_0                 2 // 26'' wheel: 2050mm perimeter (2 + (8 << 8))
+#define DEFAULT_VALUE_WHEEL_PERIMETER_1                 8
+#define DEFAULT_VALUE_WHEEL_MAX_SPEED                   50 // 50km/h
+#define DEFAULT_VALUE_PAS_MAX_CADENCE                   110 // 110 RPM
+#define DEFAULT_VALUE_CONFIG_0                  0
 // *************************************************************************** //
 
 // *************************************************************************** //

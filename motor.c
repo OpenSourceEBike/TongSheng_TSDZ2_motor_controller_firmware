@@ -861,7 +861,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   { // from the init of watchdog up to first reset on PWM cycle interrupt,
     // it can take up to 250ms and so we need to init here inside the PWM cycle
     ui8_first_time_run_flag = 0;
-    watchdog_init ();
+//    watchdog_init ();
   }
   else
   {

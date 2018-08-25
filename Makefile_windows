@@ -38,6 +38,7 @@ EXTRASRCS = \
 	$(SDIR)/stm8s_tim3.c \
 	$(SDIR)/stm8s_exti.c \
 	$(SDIR)/stm8s_adc1.c \
+	$(SDIR)/stm8s_flash.c \
 	watchdog.c \
 	torque_sensor.c \
 	uart.c \

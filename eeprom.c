@@ -12,7 +12,6 @@
 #include "eeprom.h"
 #include "ebike_app.h"
 
-static struct_configuration_variables *p_configuration_variables;
 static uint8_t array_default_values [EEPROM_BYTES_STORED] = {
     KEY,
     DEFAULT_VALUE_ASSIST_LEVEL,
@@ -35,8 +34,6 @@ void eeprom_init (void)
 {
   uint8_t ui8_data;
 
-  p_configuration_variables = get_configuration_variables ();
-
   // start by reading address 0 and see if value is different from our key,
   // if so mean that eeprom memory is clean and we need to populate: should happen after erasing the microcontroller
   ui8_data = FLASH_ReadByte (ADDRESS_KEY);
@@ -48,6 +45,9 @@ void eeprom_init (void)
 
 void eeprom_init_variables (void)
 {
+  struct_configuration_variables *p_configuration_variables;
+  p_configuration_variables = get_configuration_variables ();
+
   eeprom_read_values_to_variables ();
 
   // now verify if any EEPROM saved value is out of valid range and if so,
@@ -71,6 +71,9 @@ static void eeprom_read_values_to_variables (void)
 {
   static uint8_t ui8_temp;
   static uint16_t ui16_temp;
+
+  struct_configuration_variables *p_configuration_variables;
+  p_configuration_variables = get_configuration_variables ();
 
   p_configuration_variables->ui8_assist_level = FLASH_ReadByte (ADDRESS_ASSIST_LEVEL);
   p_configuration_variables->ui8_battery_max_current = FLASH_ReadByte (ADDRESS_BATTERY_MAX_CURRENT);
@@ -103,6 +106,9 @@ void eeprom_write_variables (void)
 
 static void variables_to_array (uint8_t *ui8_array)
 {
+  struct_configuration_variables *p_configuration_variables;
+  p_configuration_variables = get_configuration_variables ();
+
   ui8_array [0] = KEY;
   ui8_array [1] = p_configuration_variables->ui8_assist_level;
   ui8_array [2] = p_configuration_variables->ui8_battery_max_current;

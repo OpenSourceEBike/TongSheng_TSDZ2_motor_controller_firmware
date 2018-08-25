@@ -241,7 +241,7 @@ void communications_controller (void)
       }
 
       // verify if any configuration_variables did change and if so, save all of them in the EEPROM
-      eeprom_write_if_values_changed ();
+//      eeprom_write_if_values_changed ();
 
       // signal that we processed the full package
       ui8_received_package_flag = 0;

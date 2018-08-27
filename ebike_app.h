@@ -18,15 +18,22 @@
 #define EBIKE_APP_STATE_MOTOR_COOL  3
 #define EBIKE_APP_STATE_MOTOR_RUNNING   4
 
-typedef struct _lcd_configuration_variables
+typedef struct _configuration_variables
 {
-  uint16_t ui16_wheel_perimeter;
   uint8_t ui8_assist_level;
+  uint8_t ui8_battery_max_current;
+  uint8_t ui8_motor_power_x10;
+  uint16_t ui16_battery_low_voltage_cut_off_x10;
+  uint16_t ui16_wheel_perimeter;
   uint8_t ui8_head_light;
   uint8_t ui8_walk_assist;
   uint8_t ui8_wheel_max_speed;
+  uint8_t ui8_pas_max_cadence;
+  uint8_t ui8_motor_voltage_type;
+  uint8_t ui8_motor_assistance_startup_without_pedal_rotation;
   uint8_t ui8_target_battery_max_power_div10;
-} struct_lcd_configuration_variables;
+  uint8_t ui8_cruise_control;
+} struct_configuration_variables;
 
 extern volatile uint8_t ui8_adc_torque_sensor_min_value;
 extern volatile uint8_t ui8_adc_torque_sensor_max_value;
@@ -44,5 +51,6 @@ extern volatile uint8_t ui8_wheel_speed_sensor_is_disconnected;
 void ebike_app_init (void);
 void ebike_app_controller (void);
 void read_pas_cadence (void);
+struct_configuration_variables* get_configuration_variables (void);
 
 #endif /* _EBIKE_APP_H_ */

@@ -441,7 +441,7 @@ void motor_controller (void)
 // runs every 64us (PWM frequency)
 void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 {
-  uint8_t ui8_temp;
+  static uint8_t ui8_temp;
 
   /****************************************************************************/
   // read battery current ADC value | should happen at middle of the PWM duty_cycle
@@ -861,7 +861,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   { // from the init of watchdog up to first reset on PWM cycle interrupt,
     // it can take up to 250ms and so we need to init here inside the PWM cycle
     ui8_first_time_run_flag = 0;
-    watchdog_init ();
+//    watchdog_init ();
   }
   else
   {
@@ -970,6 +970,8 @@ void calc_foc_angle (void)
   uint32_t ui32_w_angular_velocity_x16;
   uint16_t ui16_iwl_128;
 
+  struct_configuration_variables *p_configuration_variables;
+  p_configuration_variables = get_configuration_variables ();
 
   // FOC implementation by calculating the angle between phase current and rotor magnetic flux (BEMF)
   // 1. phase voltage is calculate
@@ -997,14 +999,22 @@ void calc_foc_angle (void)
   // calc W angular velocity: erps * 6.3
   ui32_w_angular_velocity_x16 = ui16_motor_speed_erps * 101;
 
+  // ---------------------------------------------------------------------------------------------------------------------
   // 36V motor: L = 76uH
   // 48V motor: L = 135uH
-//  ui32_l_x1048576 = 142; // 1048576 = 2^20 | 48V
-//  ui32_l_x1048576 = 80; // 1048576 = 2^20 | 36V
-
+  // ui32_l_x1048576 = 142; // 1048576 = 2^20 | 48V
+  // ui32_l_x1048576 = 80; // 1048576 = 2^20 | 36V
+  // ---------------------------------------------------------------------------------------------------------------------
   // ui32_l_x1048576 = 142 <--- THIS VALUE WAS verified experimentaly on 2018.07 to be near the best value for a 48V motor,
   // test done with a fixed mechanical load, duty_cycle = 200 and 100 and measured battery current was 16 and 6 (10 and 4 amps)
-  ui32_l_x1048576 = 142;
+  if (p_configuration_variables->ui8_motor_voltage_type)
+  {
+    ui32_l_x1048576 = 80; // 36V motor
+  }
+  else
+  {
+    ui32_l_x1048576 = 142; // 48V motor
+  }
 
   // calc IwL
   ui32_temp = ui32_i_phase_current_x2 * ui32_l_x1048576;

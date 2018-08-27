@@ -77,7 +77,7 @@
 #define DEFAULT_VALUE_WHEEL_PERIMETER_1                 8
 #define DEFAULT_VALUE_WHEEL_MAX_SPEED                   50 // 50km/h
 #define DEFAULT_VALUE_PAS_MAX_CADENCE                   110 // 110 RPM
-#define DEFAULT_VALUE_CONFIG_0                  0
+#define DEFAULT_VALUE_CONFIG_0                          0
 // *************************************************************************** //
 
 // *************************************************************************** //

@@ -94,7 +94,7 @@ static void eeprom_read_values_to_variables (void)
 
   ui8_temp = FLASH_ReadByte (ADDRESS_CONFIG_0);
   p_configuration_variables->ui8_motor_voltage_type = ui8_temp & 1;
-  p_configuration_variables->ui8_motor_assistance_startup_config = (ui8_temp & 2) >> 1;
+  p_configuration_variables->ui8_motor_assistance_startup_without_pedal_rotation = (ui8_temp & 2) >> 1;
 }
 
 void eeprom_write_variables (void)
@@ -120,7 +120,7 @@ static void variables_to_array (uint8_t *ui8_array)
   ui8_array [8] = p_configuration_variables->ui8_wheel_max_speed;
   ui8_array [9] = p_configuration_variables->ui8_pas_max_cadence;
   ui8_array [10] = (p_configuration_variables->ui8_motor_voltage_type & 1) |
-                      ((p_configuration_variables->ui8_motor_assistance_startup_config & 1) << 1);
+                      ((p_configuration_variables->ui8_motor_assistance_startup_without_pedal_rotation & 1) << 1);
 }
 
 static void eeprom_write_array (uint8_t *array)

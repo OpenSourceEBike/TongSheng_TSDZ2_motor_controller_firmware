@@ -91,9 +91,9 @@ void read_pas_cadence (void)
   {
     ui8_pas_cadence_rpm = (uint8_t) (60 / (((float) ui16_pas_pwm_cycles_ticks) * ((float) PAS_NUMBER_MAGNETS) * 0.000064));
 
-    if (ui8_pas_cadence_rpm > ((uint8_t) PAS_MAX_CADENCE_RPM))
+    if (ui8_pas_cadence_rpm > configuration_variables.ui8_pas_max_cadence)
     {
-      ui8_pas_cadence_rpm = ((uint8_t) PAS_MAX_CADENCE_RPM);
+      ui8_pas_cadence_rpm = configuration_variables.ui8_pas_max_cadence;
     }
   }
 }
@@ -168,7 +168,7 @@ void throttle_read (void)
 void ebike_app_init (void)
 {
   // init variables with the stored value on EEPROM
-//  eeprom_init_variables ();
+  eeprom_init_variables ();
   ebike_app_set_battery_max_current (ADC_BATTERY_CURRENT_MAX);
 }
 
@@ -231,14 +231,14 @@ void communications_controller (void)
         case 2:
           // wheel max speed
           configuration_variables.ui8_wheel_max_speed = ui8_rx_buffer [5];
-          // PAS_MAX_CADENCE_RPM
+          // PAS max cadence RPM
           configuration_variables.ui8_pas_max_cadence = ui8_rx_buffer [6];
         break;
 
         case 3:
           configuration_variables.ui8_cruise_control = ui8_rx_buffer [5] & 1;
           configuration_variables.ui8_motor_voltage_type = (ui8_rx_buffer [5] & 2) >> 1;
-          configuration_variables.ui8_motor_assistance_startup_config = (ui8_rx_buffer [5] & 4) >> 2;
+          configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation = (ui8_rx_buffer [5] & 4) >> 2;
         break;
       }
 
@@ -344,11 +344,11 @@ static void ebike_control_motor (void)
   uint8_t ui8_battery_target_current;
 
   // cadence percentage (in x256)
-  ui16_temp = (((uint16_t) ui8_pas_cadence_rpm) << 8) / ((uint16_t) PAS_MAX_CADENCE_RPM);
-  // limit the calculated value to be no more than PAS_MAX_CADENCE_RPM x256
-  if (ui8_pas_cadence_rpm > PAS_MAX_CADENCE_RPM)
+  ui16_temp = (((uint16_t) ui8_pas_cadence_rpm) << 8) / ((uint16_t) configuration_variables.ui8_pas_max_cadence);
+  // limit the calculated value to be no more than PAS max cadence RPM x256
+  if (ui8_pas_cadence_rpm > configuration_variables.ui8_pas_max_cadence)
   {
-    ui16_temp = ((uint16_t) PAS_MAX_CADENCE_RPM) << 8;
+    ui16_temp = ((uint16_t) configuration_variables.ui8_pas_max_cadence) << 8;
   }
 
   // human power: pedal torque * pedal cadence
@@ -365,21 +365,21 @@ static void ebike_control_motor (void)
 
     ui8_pedal_human_power = (uint8_t) f_temp;
   }
-#if (MOTOR_ASSISTANCE_CAN_START_WITHOUT_PEDAL_ROTATION == 1)
-  else
+  else if (configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation)
   {
     ui8_pedal_human_power = ui8_torque_sensor;
   }
-#else
-  else if (ui8_pas_cadence_rpm > 6)
+  else if (configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation == 0)
   {
-    ui8_pedal_human_power = ui8_torque_sensor;
+    if (ui8_pas_cadence_rpm > 6)
+    {
+      ui8_pedal_human_power = ui8_torque_sensor;
+    }
+    else
+    {
+      ui8_pedal_human_power = 0;
+    }
   }
-  else
-  {
-    ui8_pedal_human_power = 0;
-  }
-#endif
 
   // use the value that is the max of both signals: throttle or torque sensor (human power)
   ui8_throttle_value = ui8_max (ui8_throttle, ui8_pedal_human_power);

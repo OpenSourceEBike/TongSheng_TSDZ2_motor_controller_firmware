@@ -68,7 +68,7 @@ int main (void)
 
   brake_init ();
   while (brake_is_set()) ; // hold here while brake is pressed -- this is a protection for development
-  eeprom_init ();
+//  eeprom_init ();
   uart2_init ();
   timer2_init ();
   timer3_init ();

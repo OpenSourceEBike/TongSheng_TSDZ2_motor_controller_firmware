@@ -378,9 +378,9 @@ uint16_t ui16_duty_cycle_ramp_up_inverse_step;
 uint16_t ui16_duty_cycle_ramp_down_inverse_step;
 uint16_t ui16_counter_duty_cycle_ramp_up = 0;
 uint16_t ui16_counter_duty_cycle_ramp_down = 0;
-uint8_t ui8_phase_a_voltage;
-uint8_t ui8_phase_b_voltage;
-uint8_t ui8_phase_c_voltage;
+//uint8_t ui8_phase_a_voltage;
+//uint8_t ui8_phase_b_voltage;
+//uint8_t ui8_phase_c_voltage;
 uint16_t ui16_value;
 
 uint8_t ui8_first_time_run_flag = 1;
@@ -441,7 +441,14 @@ void motor_controller (void)
 // runs every 64us (PWM frequency)
 void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 {
-  uint8_t ui8_temp;
+  static uint8_t ui8_temp;
+  static uint8_t _ui8_duty_cycle;
+  static uint8_t _ui8_duty_cycle_target;
+  static uint8_t ui8_phase_a_voltage;
+  static uint8_t ui8_phase_b_voltage;
+  static uint8_t ui8_phase_c_voltage;
+  _ui8_duty_cycle = ui8_duty_cycle;
+  _ui8_duty_cycle_target = ui8_duty_cycle_target;
 
   /****************************************************************************/
   // read battery current ADC value | should happen at middle of the PWM duty_cycle

@@ -58,7 +58,7 @@ volatile struct_configuration_variables configuration_variables;
 volatile uint8_t ui8_received_package_flag = 0;
 volatile uint8_t ui8_rx_buffer[9];
 volatile uint8_t ui8_rx_counter = 0;
-volatile uint8_t ui8_tx_buffer[20];
+volatile uint8_t ui8_tx_buffer[21];
 volatile uint8_t ui8_tx_counter = 0;
 volatile uint8_t ui8_i;
 volatile uint8_t ui8_checksum;
@@ -67,6 +67,7 @@ volatile uint8_t ui8_state_machine = 0;
 volatile uint8_t ui8_uart_received_first_package = 0;
 static uint16_t ui16_crc_rx;
 static uint16_t ui16_crc_tx;
+static uint8_t ui8_last_package_id;
 
 uint8_t ui8_tstr_state_machine = STATE_NO_PEDALLING;
 uint8_t ui8_rtst_counter = 0;
@@ -167,7 +168,7 @@ void throttle_read (void)
 void ebike_app_init (void)
 {
   // init variables with the stored value on EEPROM
-  eeprom_init_variables ();
+//  eeprom_init_variables ();
   ebike_app_set_battery_max_current (ADC_BATTERY_CURRENT_MAX);
 }
 
@@ -209,7 +210,8 @@ void communications_controller (void)
       ebike_app_set_battery_max_current (configuration_variables.ui8_battery_max_current);
       // target battery max power
       configuration_variables.ui8_target_battery_max_power_div10 = ui8_rx_buffer [3];
-      // now get a variable ID for each package sent
+
+      // now get data depending on variable ID for each package sent
       switch (ui8_rx_buffer [4])
       {
         case 0:
@@ -240,6 +242,9 @@ void communications_controller (void)
         break;
       }
 
+      // store last package ID
+      ui8_last_package_id = ui8_rx_buffer [4];
+
       // verify if any configuration_variables did change and if so, save all of them in the EEPROM
 //      eeprom_write_if_values_changed ();
 
@@ -265,63 +270,65 @@ void uart_send_package (void)
   // start up byte
   ui8_tx_buffer[0] = 0x43;
 
+  ui8_tx_buffer[1] = ui8_last_package_id;
+
   ui16_temp = motor_get_adc_battery_voltage_filtered_10b ();
   // adc 10 bits battery voltage
-  ui8_tx_buffer[1] = (ui16_temp & 0xff);
-  ui8_tx_buffer[2] = ((uint8_t) (ui16_temp >> 4)) & 0x30;
+  ui8_tx_buffer[2] = (ui16_temp & 0xff);
+  ui8_tx_buffer[3] = ((uint8_t) (ui16_temp >> 4)) & 0x30;
 
   // battery current x5
-  ui8_tx_buffer[3] = (uint8_t) ((float) motor_get_adc_battery_current_filtered_10b () * 0.826);
+  ui8_tx_buffer[4] = (uint8_t) ((float) motor_get_adc_battery_current_filtered_10b () * 0.826);
 
   // wheel speed
-  ui8_tx_buffer[4] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
-  ui8_tx_buffer[5] = (uint8_t) (ui16_wheel_speed_x10 >> 8);
+  ui8_tx_buffer[5] = (uint8_t) (ui16_wheel_speed_x10 & 0xff);
+  ui8_tx_buffer[6] = (uint8_t) (ui16_wheel_speed_x10 >> 8);
 
   // brake state
   if (motor_controller_state_is_set (MOTOR_CONTROLLER_STATE_BRAKE))
   {
-    ui8_tx_buffer[6] |= 1;
+    ui8_tx_buffer[7] |= 1;
   }
   else
   {
-    ui8_tx_buffer[6] &= ~1;
+    ui8_tx_buffer[7] &= ~1;
   }
 
   // error states
-  ui8_tx_buffer[7] = 0;
+  ui8_tx_buffer[8] = 0;
 
   // ADC throttle
-  ui8_tx_buffer[8] = UI8_ADC_THROTTLE;
+  ui8_tx_buffer[9] = UI8_ADC_THROTTLE;
   // throttle value with offset removed and mapped to 255
-  ui8_tx_buffer[9] = ui8_throttle;
+  ui8_tx_buffer[10] = ui8_throttle;
   // ADC torque_sensor
-  ui8_tx_buffer[10] = UI8_ADC_TORQUE_SENSOR;
+  ui8_tx_buffer[11] = UI8_ADC_TORQUE_SENSOR;
   // torque sensor value with offset removed and mapped to 255
-  ui8_tx_buffer[11] = ui8_torque_sensor;
+  ui8_tx_buffer[12] = ui8_torque_sensor;
   // PAS cadence
-  ui8_tx_buffer[12] = ui8_pas_cadence_rpm;
+  ui8_tx_buffer[13] = ui8_pas_cadence_rpm;
   // pedal human power mapped to 255
-  ui8_tx_buffer[13] = ui8_pedal_human_power;
+  ui8_tx_buffer[14] = ui8_pedal_human_power;
   // PWM duty_cycle
-  ui8_tx_buffer[14] = ui8_duty_cycle;
+  ui8_tx_buffer[15] = ui8_duty_cycle;
   // motor speed in ERPS
   ui16_temp = ui16_motor_get_motor_speed_erps(),
-  ui8_tx_buffer[15] = (uint8_t) (ui16_temp & 0xff);
-  ui8_tx_buffer[16] = (uint8_t) (ui16_temp >> 8);
+  ui8_tx_buffer[16] = (uint8_t) (ui16_temp & 0xff);
+  ui8_tx_buffer[17] = (uint8_t) (ui16_temp >> 8);
   // FOC angle
-  ui8_tx_buffer[17] = ui8_foc_angle;
+  ui8_tx_buffer[18] = ui8_foc_angle;
 
   // prepare crc of the package
   ui16_crc_tx = 0xffff;
-  for (ui8_i = 0; ui8_i <= 17; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 18; ui8_i++)
   {
     crc16 (ui8_tx_buffer[ui8_i], &ui16_crc_tx);
   }
-  ui8_tx_buffer[18] = (uint8_t) (ui16_crc_tx & 0xff);
-  ui8_tx_buffer[19] = (uint8_t) (ui16_crc_tx >> 8) & 0xff;
+  ui8_tx_buffer[19] = (uint8_t) (ui16_crc_tx & 0xff);
+  ui8_tx_buffer[20] = (uint8_t) (ui16_crc_tx >> 8) & 0xff;
 
   // send the full package to UART
-  for (ui8_i = 0; ui8_i <= 19; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 20; ui8_i++)
   {
     putchar (ui8_tx_buffer[ui8_i]);
   }

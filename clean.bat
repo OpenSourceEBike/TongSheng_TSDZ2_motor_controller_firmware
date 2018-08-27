@@ -1,5 +1,8 @@
 @ECHO OFF
 
+del /q main.hex >NUL 2>NUL
+del /q main.ihx >NUL 2>NUL
+
 cd stdperiphlib\src
 del /q *.asm >NUL 2>NUL
 del /q *.rel >NUL 2>NUL

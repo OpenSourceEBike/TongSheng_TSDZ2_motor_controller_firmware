@@ -13,7 +13,6 @@
 // to run the 2 different available motors of 36V or 48V motor,
 // and from 24V battery (7S) up to 52V battery pack (14S).
 
-
 // *************************************************************************** //
 // LCD
 
@@ -26,20 +25,7 @@
 #define ASSIST_LEVEL_5      9.0
 
 // *************************************************************************** //
-// PAS configurations
-
-// MAX cadence, where the output value of PAS processing will be the max value
-#define PAS_MAX_CADENCE_RPM 120
-
-// *************************************************************************** //
 // BATTERY
-// Choose your battery pack voltage
-
-// the cells number can be a custom value from 7S up to 14S, choose the value of your battery pack
-#define BATTERY_LI_ION_CELLS_NUMBER  13
-//#define BATTERY_LI_ION_CELLS_NUMBER	10 // 10S = 36V battery pack
-//#define BATTERY_LI_ION_CELLS_NUMBER	13 // 13S = 48V battery pack
-//#define BATTERY_LI_ION_CELLS_NUMBER 14 // 14S = 52V battery pack
 
 // This is the current that motor will draw from the battery
 // Higher value will give higher torque and the limit of the controller is 16 amps
@@ -63,10 +49,6 @@
 // For a 24V battery, 25 for ramp up seems ok. For an higher voltage battery, this values should be higher
 #define PWM_DUTY_CYCLE_RAMP_UP_INVERSE_STEP 75
 #define PWM_DUTY_CYCLE_RAMP_DOWN_INVERSE_STEP 25
-
-// define whether the motor can start without pedal rotation.
-// for safety, this should be turned off when not using e-brakes
-#define MOTOR_ASSISTANCE_CAN_START_WITHOUT_PEDAL_ROTATION 1
 
 // *************************************************************************** //
 // MOTOR

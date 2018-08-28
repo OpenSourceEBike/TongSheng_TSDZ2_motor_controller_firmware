@@ -1000,6 +1000,16 @@ void calc_foc_angle (void)
   ui32_w_angular_velocity_x16 = ui16_motor_speed_erps * 101;
 
   // ---------------------------------------------------------------------------------------------------------------------
+  // NOTE: EXPERIMENTAL and may not be good for the brushless motor inside TSDZ2
+  // Original message from jbalat on 28.08.2018, about increasing the limits on 36V motor -- please see that this seems to go over the recomended values
+  // The ui32_l_x1048576 = 105 is working well so give that a try if you have a 36v motor.
+  // This is the minimum value that gives me 550w of power when I have asked for 550w at level 5 assist, >36km/hr
+  //
+  //  remember also to boost the max overdrive erps in main.h to get higher cadence
+  // #define MOTOR_OVER_SPEED_ERPS 700 // motor max speed, protection max value | 30 points for the sinewave at max speed
+  // ---------------------------------------------------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------------------------------------------------
   // 36V motor: L = 76uH
   // 48V motor: L = 135uH
   // ui32_l_x1048576 = 142; // 1048576 = 2^20 | 48V

@@ -11,21 +11,22 @@
 
 #include "main.h"
 
-#define KEY                                         0xca
+#define KEY                                         0xcc
 
 #define EEPROM_BASE_ADDRESS 			                  0x4000
 #define ADDRESS_KEY 				                        EEPROM_BASE_ADDRESS
-#define ADDRESS_ASSIST_LEVEL 			                  1 + EEPROM_BASE_ADDRESS
-#define ADDRESS_BATTERY_MAX_CURRENT 		            2 + EEPROM_BASE_ADDRESS
-#define ADDRESS_MOTOR_POWER_X10	 		                3 + EEPROM_BASE_ADDRESS
-#define ADDRESS_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_0   4 + EEPROM_BASE_ADDRESS
-#define ADDRESS_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_1   5 + EEPROM_BASE_ADDRESS
-#define ADDRESS_WHEEL_PERIMETER_0          	        6 + EEPROM_BASE_ADDRESS
-#define ADDRESS_WHEEL_PERIMETER_1                   7 + EEPROM_BASE_ADDRESS
-#define ADDRESS_WHEEL_MAX_SPEED                     8 + EEPROM_BASE_ADDRESS
-#define ADDRESS_PAS_MAX_CADENCE                     9 + EEPROM_BASE_ADDRESS
-#define ADDRESS_CONFIG_0              		          10 + EEPROM_BASE_ADDRESS
-#define EEPROM_BYTES_STORED                         11
+#define ADDRESS_ASSIST_LEVEL_FACTOR_X10             1 + EEPROM_BASE_ADDRESS
+#define ADDRESS_CONFIG_0                            2 + EEPROM_BASE_ADDRESS
+#define ADDRESS_BATTERY_MAX_CURRENT 		            3 + EEPROM_BASE_ADDRESS
+#define ADDRESS_MOTOR_POWER_X10	 		                4 + EEPROM_BASE_ADDRESS
+#define ADDRESS_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_0   5 + EEPROM_BASE_ADDRESS
+#define ADDRESS_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_1   6 + EEPROM_BASE_ADDRESS
+#define ADDRESS_WHEEL_PERIMETER_0          	        7 + EEPROM_BASE_ADDRESS
+#define ADDRESS_WHEEL_PERIMETER_1                   8 + EEPROM_BASE_ADDRESS
+#define ADDRESS_WHEEL_MAX_SPEED                     9 + EEPROM_BASE_ADDRESS
+#define ADDRESS_PAS_MAX_CADENCE                     10 + EEPROM_BASE_ADDRESS
+#define ADDRESS_CONFIG_1              		          11 + EEPROM_BASE_ADDRESS
+#define EEPROM_BYTES_STORED                         12
 
 void eeprom_init (void);
 void eeprom_init_variables (void);

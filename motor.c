@@ -855,19 +855,19 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
    }
    /****************************************************************************/
 
-  /****************************************************************************/
-  // reload watchdog timer, every PWM cycle to avoid automatic reset of the microcontroller
-  if (ui8_first_time_run_flag)
-  { // from the init of watchdog up to first reset on PWM cycle interrupt,
-    // it can take up to 250ms and so we need to init here inside the PWM cycle
-    ui8_first_time_run_flag = 0;
+//  /****************************************************************************/
+//  // reload watchdog timer, every PWM cycle to avoid automatic reset of the microcontroller
+//  if (ui8_first_time_run_flag)
+//  { // from the init of watchdog up to first reset on PWM cycle interrupt,
+//    // it can take up to 250ms and so we need to init here inside the PWM cycle
+//    ui8_first_time_run_flag = 0;
 //    watchdog_init ();
-  }
-  else
-  {
-    IWDG->KR = IWDG_KEY_REFRESH; // reload watch dog timer counter
-  }
-  /****************************************************************************/
+//  }
+//  else
+//  {
+//    IWDG->KR = IWDG_KEY_REFRESH; // reload watch dog timer counter
+//  }
+//  /****************************************************************************/
 
   /****************************************************************************/
   // clears the TIM1 interrupt TIM1_IT_UPDATE pending bit

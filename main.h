@@ -68,7 +68,8 @@
 
 // *************************************************************************** //
 // EEPROM memory variables default values
-#define DEFAULT_VALUE_ASSIST_LEVEL                      2
+#define DEFAULT_VALUE_ASSIST_LEVEL_FACTOR_X10           40 // 4.0
+#define DEFAULT_VALUE_CONFIG_0                          0
 #define DEFAULT_VALUE_BATTERY_MAX_CURRENT               10 // 10 amps
 #define DEFAULT_VALUE_TARGET_BATTERY_MAX_POWER_X10      50 // 500 watts
 #define DEFAULT_VALUE_BATTERY_LOW_VOLTAGE_CUT_OFF_X10_0 134 // 48v battery, LVC = 39.0 (3.0 * 13): (134 + (1 << 8))
@@ -77,7 +78,7 @@
 #define DEFAULT_VALUE_WHEEL_PERIMETER_1                 8
 #define DEFAULT_VALUE_WHEEL_MAX_SPEED                   50 // 50km/h
 #define DEFAULT_VALUE_PAS_MAX_CADENCE                   110 // 110 RPM
-#define DEFAULT_VALUE_CONFIG_0                          0
+#define DEFAULT_VALUE_CONFIG_1                          0
 // *************************************************************************** //
 
 // *************************************************************************** //

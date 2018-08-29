@@ -337,7 +337,6 @@ void uart_send_package (void)
 static void ebike_control_motor (void)
 {
   uint16_t ui16_temp;
-  float f_temp;
   uint8_t ui8_throttle_value;
   uint16_t ui16_battery_voltage_filtered;
   uint16_t ui16_max_battery_current;

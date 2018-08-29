@@ -14,17 +14,6 @@
 // and from 24V battery (7S) up to 52V battery pack (14S).
 
 // *************************************************************************** //
-// LCD
-
-// you can tune LCD assist level
-#define ASSIST_LEVEL_0      0.0
-#define ASSIST_LEVEL_1      1.0
-#define ASSIST_LEVEL_2      2.0
-#define ASSIST_LEVEL_3      3.0
-#define ASSIST_LEVEL_4      6.0
-#define ASSIST_LEVEL_5      9.0
-
-// *************************************************************************** //
 // BATTERY
 
 // This is the current that motor will draw from the battery

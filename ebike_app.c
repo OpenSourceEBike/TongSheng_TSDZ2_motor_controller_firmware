@@ -508,22 +508,22 @@ void calc_wheel_speed (void)
 
 uint8_t speed_limiter (uint8_t ui8_throttle_value)
 {
-  float speed_limit_factor = 1;
+  float f_speed_limit_factor = 1;
 
   // start limiting when approaching the configured speed limit by 0.5 km/h
   if (f_wheel_speed >= configuration_variables.ui8_wheel_max_speed - 0.5) {
 
     // stop assisting when 2 km/h beyond the configured speed limit
     if (f_wheel_speed >= configuration_variables.ui8_wheel_max_speed + 2)
-      speed_limit_factor = 0;
+      f_speed_limit_factor = 0;
     else
     {
       // taper off linearly until 2 km/h beyond the configured speed limit
-      speed_limit_factor = 0.4 * ((configuration_variables.ui8_wheel_max_speed + 2) - f_wheel_speed);
+      f_speed_limit_factor = 0.4 * ((configuration_variables.ui8_wheel_max_speed + 2) - f_wheel_speed);
     }
   }
 
-  return (uint8_t) (speed_limit_factor * ui8_throttle_value);
+  return (uint8_t) (f_speed_limit_factor * ui8_throttle_value);
 }
 
 struct_configuration_variables* get_configuration_variables (void)

@@ -45,6 +45,10 @@ volatile uint16_t ui16_pas_pwm_cycles_ticks = (uint16_t) PAS_ABSOLUTE_MIN_CADENC
 volatile uint8_t ui8_pas_direction = 0;
 uint8_t ui8_pas_cadence_rpm = 0;
 uint8_t ui8_pedal_human_power = 0;
+uint8_t ui8_startup_boost_enable = 0;
+uint8_t ui8_startup_boost_state = 0;
+uint8_t ui8_startup_boost_no_torque = 0;
+uint8_t ui8_startup_boost_timer = 0;
 
 // wheel speed
 volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks = (uint16_t) WHEEL_SPEED_SENSOR_MAX_PWM_CYCLE_TICKS;
@@ -81,6 +85,7 @@ void uart_send_package (void);
 void calc_wheel_speed (void);
 void throttle_read (void);
 void torque_sensor_read (void);
+void startup_boost (void);
 
 void read_pas_cadence (void)
 {
@@ -118,9 +123,9 @@ void torque_sensor_read (void)
     }
     break;
 
-    // now count 5 seconds
+    // now count 3 seconds
     case STATE_STARTUP_PEDALLING:
-    if (ui8_rtst_counter++ > 50) // 5 seconds
+    if (ui8_rtst_counter++ > 30) // 3 seconds
     {
       ui8_rtst_counter = 0;
       ui8_tstr_state_machine = STATE_PEDALLING;
@@ -162,6 +167,70 @@ void throttle_read (void)
       (uint8_t) ADC_THROTTLE_MAX_VALUE,
       (uint8_t) 0,
       (uint8_t) 255));
+}
+
+void startup_boost (void)
+{
+configuration_variables.ui8_startup_motor_power_boost_state = 3;
+
+  // startup_boost must be enabled
+  if (configuration_variables.ui8_startup_motor_power_boost_state)
+  {
+    // startup_boost if disabled
+    if (ui8_startup_boost_enable == 0)
+    {
+      // startup_boost when wheel speed = 0
+      if (configuration_variables.ui8_startup_motor_power_boost_state & 1)
+      {
+        // startup_boost when start pedaling
+        if (ui8_tstr_state_machine == STATE_STARTUP_PEDALLING)
+        {
+          ui8_startup_boost_enable = 1;
+          ui8_startup_boost_state = 1;
+          ui8_startup_boost_timer = 25; // 2.5 seconds
+        }
+      }
+
+      // startup_boost with torque_sensor
+      if (configuration_variables.ui8_startup_motor_power_boost_state & 2)
+      {
+        // startup_boost with torque sensor
+        if (ui8_torque_sensor > 0)
+        {
+          ui8_startup_boost_enable = 1;
+          ui8_startup_boost_state = 1;
+          ui8_startup_boost_timer = 25; // 2.5 seconds
+        }
+      }
+    }
+
+    // decrement timer
+    if (ui8_startup_boost_timer > 0) { ui8_startup_boost_timer--; }
+
+    // startup_boost disable when no torque
+    if ((ui8_startup_boost_state == 1) && (ui8_torque_sensor == 0))
+    {
+      ui8_startup_boost_state = 0;
+      ui8_startup_boost_enable = 0;
+    }
+
+    // startup_boost disable when time out and no torque
+    if (ui8_startup_boost_timer == 0)
+    {
+      ui8_startup_boost_state = 2;
+      ui8_startup_boost_enable = 0;
+    }
+
+    if ((ui8_startup_boost_state == 2) && (ui8_torque_sensor > 0))
+    {
+      ui8_startup_boost_state = 2;
+    }
+
+    if ((ui8_startup_boost_state == 2) && (ui8_torque_sensor == 0))
+    {
+      ui8_startup_boost_state = 2;
+    }
+  }
 }
 
 void ebike_app_init (void)
@@ -347,6 +416,8 @@ static void ebike_control_motor (void)
   uint8_t ui8_startup_enable;
   uint8_t ui8_human_power_factor_at_startup;
 
+  startup_boost ();
+
   // start with disabled
   ui8_startup_enable = 0;
   // start when we press the pedals
@@ -405,13 +476,12 @@ static void ebike_control_motor (void)
     ui16_adc_max_battery_current = ((uint16_t) configuration_variables.ui8_target_battery_max_power_div10 * 16) / ui16_battery_voltage_filtered;
   }
 
-  if (configuration_variables.ui8_startup_motor_power_boost_state)
+  if (ui8_startup_boost_enable)
   {
     // motor startup assist power boost
     // power boost should happen while pedal cadence < 25
-    if (((configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation) ||
-        (ui8_pas_cadence_rpm > 6)) &&
-        (ui8_pas_cadence_rpm < 25))
+    if (configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation ||
+        (ui8_pas_cadence_rpm > 6))
     {
       // 1.6 = 1 / 0.625(each adc step for current)
       // 1.6 * 10 = 16

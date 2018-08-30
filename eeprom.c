@@ -154,20 +154,23 @@ void eeprom_write_if_values_changed (void)
 // all the variables all written to EEPROM. As per datasheet, seems each byte takes ~6ms to be written
 // I am not sure the issue is the amount of time...
 
-//  uint8_t ui8_index;
-//
-//  uint8_t array_variables [EEPROM_BYTES_STORED];
-//  variables_to_array (array_variables);
-//
-//  ui8_index = 1; // do not verify the first byte: ADDRESS_KEY
-//  while (ui8_index < EEPROM_BYTES_STORED)
-//  {
-//    if (array_variables [ui8_index] != FLASH_ReadByte (EEPROM_BASE_ADDRESS + ui8_index))
-//    {
-//      eeprom_write_array (array_variables);
-//      break; // exit the while loop
-//    }
-//
-//    ui8_index++;
-//  }
+// 2018.08.30 endlesscadence:
+// This code is enabled again for testing purposes. 
+// Obviously we need a way to update our EEPROM values...
+ uint8_t ui8_index;
+
+ uint8_t array_variables [EEPROM_BYTES_STORED];
+ variables_to_array (array_variables);
+
+ ui8_index = 1; // do not verify the first byte: ADDRESS_KEY
+ while (ui8_index < EEPROM_BYTES_STORED)
+ {
+   if (array_variables [ui8_index] != FLASH_ReadByte (EEPROM_BASE_ADDRESS + ui8_index))
+   {
+     eeprom_write_array (array_variables);
+     break; // exit the while loop
+   }
+
+   ui8_index++;
+ }
 }

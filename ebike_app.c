@@ -48,7 +48,7 @@ uint8_t ui8_pedal_human_power = 0;
 
 // wheel speed
 volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks = (uint16_t) WHEEL_SPEED_SENSOR_MAX_PWM_CYCLE_TICKS;
-uint8_t ui8_wheel_speed_max = 0;
+float f_wheel_speed;
 float f_wheel_speed_x10;
 uint16_t ui16_wheel_speed_x10;
 
@@ -81,6 +81,7 @@ void uart_send_package (void);
 void calc_wheel_speed (void);
 void throttle_read (void);
 void torque_sensor_read (void);
+uint8_t speed_limiter (uint8_t ui8_throttle_value);
 
 void read_pas_cadence (void)
 {
@@ -336,7 +337,6 @@ void uart_send_package (void)
 static void ebike_control_motor (void)
 {
   uint16_t ui16_temp;
-  float f_temp;
   uint8_t ui8_throttle_value;
   uint16_t ui16_battery_voltage_filtered;
   uint16_t ui16_max_battery_current;
@@ -381,6 +381,9 @@ static void ebike_control_motor (void)
 
   // use the value that is the max of both signals: throttle or torque sensor (human power)
   ui8_throttle_value = ui8_max (ui8_throttle, ui8_pedal_human_power);
+
+  // speed limiter
+  ui8_throttle_value = speed_limiter (ui8_throttle_value);
 
   // map previous value to battery current
   ui8_battery_target_current = (uint8_t) (map ((uint32_t) ui8_throttle_value,
@@ -490,15 +493,37 @@ void calc_wheel_speed (void)
   // calc wheel speed in km/h
   if (ui16_wheel_speed_sensor_pwm_cycles_ticks < WHEEL_SPEED_SENSOR_MIN_PWM_CYCLE_TICKS)
   {
-    f_wheel_speed_x10 = ((float) PWM_CYCLES_SECOND) / ((float) ui16_wheel_speed_sensor_pwm_cycles_ticks); // rps
-    f_wheel_speed_x10 *= configuration_variables.ui16_wheel_perimeter; // millimeters per second
-    f_wheel_speed_x10 *= 0.036; // ((3600 / (1000 * 1000)) * 10) kms per hour * 10
+    f_wheel_speed = ((float) PWM_CYCLES_SECOND) / ((float) ui16_wheel_speed_sensor_pwm_cycles_ticks); // rps
+    f_wheel_speed *= configuration_variables.ui16_wheel_perimeter; // millimeters per second
+    f_wheel_speed *= 0.0036; // (3600 / (1000 * 1000)) kms per hour
+
+    f_wheel_speed_x10 = f_wheel_speed * 10.0; //kms per hour * 10
     ui16_wheel_speed_x10 = (uint16_t) f_wheel_speed_x10;
   }
   else
   {
     ui16_wheel_speed_x10 = 0;
   }
+}
+
+uint8_t speed_limiter (uint8_t ui8_throttle_value)
+{
+  float f_speed_limit_factor = 1;
+
+  // start limiting when approaching the configured speed limit by 0.5 km/h
+  if (f_wheel_speed >= configuration_variables.ui8_wheel_max_speed - 0.5) {
+
+    // stop assisting when 2 km/h beyond the configured speed limit
+    if (f_wheel_speed >= configuration_variables.ui8_wheel_max_speed + 2)
+      f_speed_limit_factor = 0;
+    else
+    {
+      // taper off linearly until 2 km/h beyond the configured speed limit
+      f_speed_limit_factor = 0.4 * ((configuration_variables.ui8_wheel_max_speed + 2) - f_wheel_speed);
+    }
+  }
+
+  return (uint8_t) (f_speed_limit_factor * ui8_throttle_value);
 }
 
 struct_configuration_variables* get_configuration_variables (void)

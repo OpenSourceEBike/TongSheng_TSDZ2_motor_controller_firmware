@@ -24,6 +24,7 @@ typedef struct pi_controller_state
 } struct_pi_controller_state;
 
 int32_t map (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max);
+int32_t map_inverse (int32_t x, int32_t in_min, int32_t in_max, int32_t out_min, int32_t out_max);
 uint8_t ui8_max (uint8_t value_a, uint8_t value_b);
 uint8_t ui8_min (uint8_t value_a, uint8_t value_b);
 void pi_controller (struct_pi_controller_state *pi_controller_state);

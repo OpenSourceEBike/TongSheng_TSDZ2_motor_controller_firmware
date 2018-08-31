@@ -24,9 +24,14 @@
 #include "config.h"
 #include "utils.h"
 
-#define STATE_NO_PEDALLING        0
-#define STATE_STARTUP_PEDALLING   1
-#define STATE_PEDALLING           2
+#define STATE_NO_PEDALLING                0
+#define STATE_STARTUP_PEDALLING           1
+#define STATE_PEDALLING                   2
+
+#define BOOST_STATE_BOOST_DISABLED        0
+#define BOOST_STATE_BOOST                 1
+#define BOOST_STATE_BOOST_POST_DELAY      2
+#define BOOST_STATE_BOOST_WAIT_TO_RESTART 3
 
 uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
@@ -34,6 +39,7 @@ uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
 volatile uint8_t ui8_throttle = 0;
 volatile uint8_t ui8_torque_sensor_value1 = 0;
 volatile uint8_t ui8_torque_sensor = 0;
+volatile uint8_t ui8_torque_sensor_raw = 0;
 volatile uint8_t ui8_adc_torque_sensor_min_value;
 volatile uint8_t ui8_adc_torque_sensor_max_value;
 volatile uint8_t ui8_adc_battery_current_offset;
@@ -46,7 +52,7 @@ volatile uint8_t ui8_pas_direction = 0;
 uint8_t ui8_pas_cadence_rpm = 0;
 uint8_t ui8_pedal_human_power = 0;
 uint8_t ui8_startup_boost_enable = 0;
-uint8_t ui8_startup_boost_state = 0;
+uint8_t ui8_startup_boost_state_machine = 0;
 uint8_t ui8_startup_boost_no_torque = 0;
 uint8_t ui8_startup_boost_timer = 0;
 
@@ -105,7 +111,8 @@ void read_pas_cadence (void)
 void torque_sensor_read (void)
 {
   // map value from 0 up to 255
-  ui8_torque_sensor = (uint8_t) (map (
+  // map value from 0 up to 255
+  ui8_torque_sensor_raw = (uint8_t) (map (
       UI8_ADC_TORQUE_SENSOR,
       (uint8_t) ui8_adc_torque_sensor_min_value,
       (uint8_t) ui8_adc_torque_sensor_max_value,
@@ -116,16 +123,16 @@ void torque_sensor_read (void)
   {
     // ebike is stopped, wait for throttle signal
     case STATE_NO_PEDALLING:
-    if ((ui8_torque_sensor > 0) &&
+    if ((ui8_torque_sensor_raw > 0) &&
         (!brake_is_set()))
     {
       ui8_tstr_state_machine = STATE_STARTUP_PEDALLING;
     }
     break;
 
-    // now count 3 seconds
+    // now count 2 seconds
     case STATE_STARTUP_PEDALLING:
-    if (ui8_rtst_counter++ > 30) // 3 seconds
+    if (ui8_rtst_counter++ > 20) // 2 seconds
     {
       ui8_rtst_counter = 0;
       ui8_tstr_state_machine = STATE_PEDALLING;
@@ -141,7 +148,7 @@ void torque_sensor_read (void)
 
     // wait on this state and reset when ebike stops
     case STATE_PEDALLING:
-    if (ui16_wheel_speed_x10 == 0)
+    if ((ui16_wheel_speed_x10 == 0) && (ui8_torque_sensor_raw == 0))
     {
       ui8_tstr_state_machine = STATE_NO_PEDALLING;
     }
@@ -155,6 +162,10 @@ void torque_sensor_read (void)
   if ((ui8_tstr_state_machine == STATE_PEDALLING) && (ui8_pas_cadence_rpm == 0))
   {
     ui8_torque_sensor = 0;
+  }
+  else
+  {
+    ui8_torque_sensor = ui8_torque_sensor_raw;
   }
 }
 
@@ -171,64 +182,70 @@ void throttle_read (void)
 
 void startup_boost (void)
 {
-configuration_variables.ui8_startup_motor_power_boost_state = 3;
+configuration_variables.ui8_startup_motor_power_boost_state = 1;
 
-  // startup_boost must be enabled
   if (configuration_variables.ui8_startup_motor_power_boost_state)
   {
-    // startup_boost if disabled
-    if (ui8_startup_boost_enable == 0)
+    switch (ui8_startup_boost_state_machine)
     {
-      // startup_boost when wheel speed = 0
-      if (configuration_variables.ui8_startup_motor_power_boost_state & 1)
+      // ebike is stopped, wait for throttle signal to startup boost
+      case BOOST_STATE_BOOST_DISABLED:
+      if ((ui8_torque_sensor_raw > 0) &&
+          (!brake_is_set()))
       {
-        // startup_boost when start pedaling
-        if (ui8_tstr_state_machine == STATE_STARTUP_PEDALLING)
-        {
-          ui8_startup_boost_enable = 1;
-          ui8_startup_boost_state = 1;
-          ui8_startup_boost_timer = 25; // 2.5 seconds
-        }
+        ui8_startup_boost_enable = 1;
+        ui8_startup_boost_timer = 25; // 2.5 seconds
+        ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
       }
+      break;
 
-      // startup_boost with torque_sensor
-      if (configuration_variables.ui8_startup_motor_power_boost_state & 2)
-      {
-        // startup_boost with torque sensor
-        if (ui8_torque_sensor > 0)
+      // wait for end of boost
+      case BOOST_STATE_BOOST:
+        // decrement timer
+        if (ui8_startup_boost_timer > 0) { ui8_startup_boost_timer--; }
+
+        // startup_boost disable when no torque or when time out
+        if ((ui8_torque_sensor_raw == 0) || (ui8_startup_boost_timer == 0))
         {
-          ui8_startup_boost_enable = 1;
-          ui8_startup_boost_state = 1;
-          ui8_startup_boost_timer = 25; // 2.5 seconds
+          ui8_startup_boost_enable = 0;
+          ui8_startup_boost_timer = 10; // 1 second
+          ui8_startup_boost_state_machine = BOOST_STATE_BOOST_POST_DELAY;
         }
-      }
-    }
+      break;
 
-    // decrement timer
-    if (ui8_startup_boost_timer > 0) { ui8_startup_boost_timer--; }
+      // make a delay/hysteresis after end of boost
+      case BOOST_STATE_BOOST_POST_DELAY:
+        // decrement timer
+        if (ui8_startup_boost_timer > 0) { ui8_startup_boost_timer--; }
 
-    // startup_boost disable when no torque
-    if ((ui8_startup_boost_state == 1) && (ui8_torque_sensor == 0))
-    {
-      ui8_startup_boost_state = 0;
-      ui8_startup_boost_enable = 0;
-    }
+        if (ui8_startup_boost_timer == 0)
+        {
+          ui8_startup_boost_state_machine = BOOST_STATE_BOOST_WAIT_TO_RESTART;
+        }
+      break;
 
-    // startup_boost disable when time out and no torque
-    if (ui8_startup_boost_timer == 0)
-    {
-      ui8_startup_boost_state = 2;
-      ui8_startup_boost_enable = 0;
-    }
+      // restart when user is not pressing the pedals AND/OR wheel speed = 0
+      case BOOST_STATE_BOOST_WAIT_TO_RESTART:
+        // wheel speed must be 0 as also torque sensor
+        if (configuration_variables.ui8_startup_motor_power_boost_state & 1)
+        {
+          if ((ui16_wheel_speed_x10 == 0) && (ui8_torque_sensor_raw == 0))
+          {
+            ui8_startup_boost_state_machine = BOOST_STATE_BOOST_DISABLED;
+          }
+        }
+        // torque sensor must be 0
+        else if (configuration_variables.ui8_startup_motor_power_boost_state & 2)
+        {
+          if (ui8_torque_sensor_raw == 0)
+          {
+            ui8_startup_boost_state_machine = BOOST_STATE_BOOST_DISABLED;
+          }
+        }
+      break;
 
-    if ((ui8_startup_boost_state == 2) && (ui8_torque_sensor > 0))
-    {
-      ui8_startup_boost_state = 2;
-    }
-
-    if ((ui8_startup_boost_state == 2) && (ui8_torque_sensor == 0))
-    {
-      ui8_startup_boost_state = 2;
+      default:
+      break;
     }
   }
 }

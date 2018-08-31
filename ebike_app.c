@@ -30,8 +30,7 @@
 
 #define BOOST_STATE_BOOST_DISABLED        0
 #define BOOST_STATE_BOOST                 1
-#define BOOST_STATE_BOOST_POST_DELAY      2
-#define BOOST_STATE_BOOST_WAIT_TO_RESTART 3
+#define BOOST_STATE_BOOST_WAIT_TO_RESTART 2
 
 uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
@@ -182,21 +181,33 @@ void throttle_read (void)
 
 void startup_boost (void)
 {
-configuration_variables.ui8_startup_motor_power_boost_state = 1;
-
-  if (configuration_variables.ui8_startup_motor_power_boost_state)
+  if (configuration_variables.ui8_startup_motor_power_boost_time > 0)
   {
     switch (ui8_startup_boost_state_machine)
     {
       // ebike is stopped, wait for throttle signal to startup boost
       case BOOST_STATE_BOOST_DISABLED:
-      if ((ui8_torque_sensor_raw > 0) &&
-          (!brake_is_set()))
-      {
-        ui8_startup_boost_enable = 1;
-        ui8_startup_boost_timer = 25; // 2.5 seconds
-        ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
-      }
+        if (configuration_variables.ui8_startup_motor_power_boost_state == 0)
+        {
+          if ((ui8_torque_sensor_raw > 0) &&
+              (!brake_is_set()))
+          {
+            ui8_startup_boost_enable = 1;
+            ui8_startup_boost_timer = configuration_variables.ui8_startup_motor_power_boost_time;
+            ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
+          }
+        }
+        else if (configuration_variables.ui8_startup_motor_power_boost_state == 1)
+        {
+          if ((ui8_torque_sensor_raw > 0) &&
+              (ui8_pas_cadence_rpm > 0) &&
+              (!brake_is_set()))
+          {
+            ui8_startup_boost_enable = 1;
+            ui8_startup_boost_timer = configuration_variables.ui8_startup_motor_power_boost_time;
+            ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
+          }
+        }
       break;
 
       // wait for end of boost
@@ -208,18 +219,6 @@ configuration_variables.ui8_startup_motor_power_boost_state = 1;
         if ((ui8_torque_sensor_raw == 0) || (ui8_startup_boost_timer == 0))
         {
           ui8_startup_boost_enable = 0;
-          ui8_startup_boost_timer = 10; // 1 second
-          ui8_startup_boost_state_machine = BOOST_STATE_BOOST_POST_DELAY;
-        }
-      break;
-
-      // make a delay/hysteresis after end of boost
-      case BOOST_STATE_BOOST_POST_DELAY:
-        // decrement timer
-        if (ui8_startup_boost_timer > 0) { ui8_startup_boost_timer--; }
-
-        if (ui8_startup_boost_timer == 0)
-        {
           ui8_startup_boost_state_machine = BOOST_STATE_BOOST_WAIT_TO_RESTART;
         }
       break;
@@ -227,7 +226,7 @@ configuration_variables.ui8_startup_motor_power_boost_state = 1;
       // restart when user is not pressing the pedals AND/OR wheel speed = 0
       case BOOST_STATE_BOOST_WAIT_TO_RESTART:
         // wheel speed must be 0 as also torque sensor
-        if (configuration_variables.ui8_startup_motor_power_boost_state & 1)
+        if (configuration_variables.ui8_startup_motor_power_boost_state == 0)
         {
           if ((ui16_wheel_speed_x10 == 0) && (ui8_torque_sensor_raw == 0))
           {
@@ -235,9 +234,9 @@ configuration_variables.ui8_startup_motor_power_boost_state = 1;
           }
         }
         // torque sensor must be 0
-        else if (configuration_variables.ui8_startup_motor_power_boost_state & 2)
+        else if (configuration_variables.ui8_startup_motor_power_boost_state == 1)
         {
-          if (ui8_torque_sensor_raw == 0)
+          if ((ui8_torque_sensor_raw == 0) || (ui8_pas_cadence_rpm == 0))
           {
             ui8_startup_boost_state_machine = BOOST_STATE_BOOST_DISABLED;
           }
@@ -324,9 +323,14 @@ void communications_controller (void)
           configuration_variables.ui8_cruise_control = ui8_rx_buffer [6] & 1;
           configuration_variables.ui8_motor_voltage_type = (ui8_rx_buffer [6] & 2) >> 1;
           configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation = (ui8_rx_buffer [6] & 4) >> 2;
-          configuration_variables.ui8_startup_motor_power_boost_state = (ui8_rx_buffer [6] & 8) >> 3;
+          configuration_variables.ui8_startup_motor_power_boost_state = ui8_rx_buffer [7];
+        break;
+
+        case 4:
           // startup motor power boost
-          configuration_variables.ui8_startup_motor_power_boost_div10 = ui8_rx_buffer [7];
+          configuration_variables.ui8_startup_motor_power_boost_div10 = ui8_rx_buffer [6];
+          // startup motor power boost time
+          configuration_variables.ui8_startup_motor_power_boost_time = ui8_rx_buffer [7];
         break;
       }
 
@@ -428,11 +432,13 @@ static void ebike_control_motor (void)
   uint8_t ui8_throttle_value;
   uint8_t _ui8_pas_cadence_rpm;
   uint16_t ui16_battery_voltage_filtered;
-  uint16_t ui16_adc_max_battery_current;
+  uint8_t ui8_adc_max_battery_current_calculated_from_power;
   uint8_t ui8_adc_battery_target_current;
   uint8_t ui8_startup_enable;
   uint8_t ui8_human_power_factor_at_startup;
+  uint8_t ui8_adc_battery_max_current_user_defined;
 
+  // manage motor startup boost
   startup_boost ();
 
   // start with disabled
@@ -443,11 +449,11 @@ static void ebike_control_motor (void)
   _ui8_pas_cadence_rpm = ui8_pas_cadence_rpm;
   if (configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation)
   {
-    if (ui8_pas_cadence_rpm < 6) { _ui8_pas_cadence_rpm = 6; }
+    if (ui8_pas_cadence_rpm < 10) { _ui8_pas_cadence_rpm = 10; }
   }
   else
   {
-    if (ui8_pas_cadence_rpm < 6) { _ui8_pas_cadence_rpm = 0; }
+    if (ui8_pas_cadence_rpm < 10) { _ui8_pas_cadence_rpm = 0; }
   }
 
   // cadence percentage (in x256)
@@ -485,25 +491,12 @@ static void ebike_control_motor (void)
   ui16_battery_voltage_filtered = ui16_battery_voltage_filtered >> 9;
 
   // calc max battery current
-  ui16_adc_max_battery_current = 0;
+  ui8_adc_max_battery_current_calculated_from_power = 0;
   if (configuration_variables.ui8_target_battery_max_power_div10 > 0)
   {
     // 1.6 = 1 / 0.625(each adc step for current)
     // 1.6 * 10 = 16
-    ui16_adc_max_battery_current = ((uint16_t) configuration_variables.ui8_target_battery_max_power_div10 * 16) / ui16_battery_voltage_filtered;
-  }
-
-  if (ui8_startup_boost_enable)
-  {
-    // motor startup assist power boost
-    // power boost should happen while pedal cadence < 25
-    if (configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation ||
-        (ui8_pas_cadence_rpm > 6))
-    {
-      // 1.6 = 1 / 0.625(each adc step for current)
-      // 1.6 * 10 = 16
-      ui8_adc_battery_target_current = ((uint16_t) configuration_variables.ui8_startup_motor_power_boost_div10 * 16) / ui16_battery_voltage_filtered;
-    }
+    ui8_adc_max_battery_current_calculated_from_power = ((uint16_t) configuration_variables.ui8_target_battery_max_power_div10 * 16) / ui16_battery_voltage_filtered;
   }
 
   // now apply the speed limit
@@ -513,8 +506,23 @@ static void ebike_control_motor (void)
          (uint32_t) ui8_adc_battery_target_current,
          (uint32_t) 0));
 
-  // now let's limit the target battery current to battery max current (use min value of both)
-  ui8_adc_battery_target_current = ui8_min (ui8_adc_battery_target_current, ui16_adc_max_battery_current);
+  if (ui8_startup_boost_enable)
+  {
+    // 1.6 = 1 / 0.625(each adc step for current)
+    // 1.6 * 10 = 16
+    ui8_adc_battery_target_current = ((uint16_t) configuration_variables.ui8_startup_motor_power_boost_div10 * 16) / ui16_battery_voltage_filtered;
+
+    // at boost, we limit to ui8_battery_max_current
+    // now let's limit the target battery current to ADC_BATTERY_CURRENT_MAX (use min value of both)
+    ui8_adc_battery_max_current_user_defined = (uint8_t) ((uint16_t) ((uint16_t) configuration_variables.ui8_battery_max_current * 16) / 10);
+    ui8_adc_battery_target_current = ui8_min (ui8_adc_battery_target_current, ui8_adc_battery_max_current_user_defined);
+  }
+  else
+  {
+    // now let's limit the target battery current to battery max current (use min value of both)
+    ui8_adc_battery_target_current = ui8_min (ui8_adc_battery_target_current, ui8_adc_max_battery_current_calculated_from_power);
+  }
+
   // finally set the target battery current to the current controller
   ebike_app_set_target_adc_battery_max_current (ui8_adc_battery_target_current);
 

@@ -357,7 +357,7 @@ uint16_t ui16_PWM_cycles_counter_total = 0xffff;
 
 volatile uint16_t ui16_motor_speed_erps = 0;
 uint8_t ui8_motor_over_speed_erps_flag = 0;
-uint8_t ui8_sinewave_table_index = 0;
+uint8_t ui8_svm_table_index = 0;
 uint8_t ui8_motor_rotor_absolute_angle;
 uint8_t ui8_motor_rotor_angle;
 
@@ -594,16 +594,16 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
     // TODO: verifiy if (ui16_PWM_cycles_counter_6 << 8) do not overflow
     ui8_interpolation_angle = (ui16_PWM_cycles_counter_6 << 8) / ui16_PWM_cycles_counter_total; // this operations take 4.4us
     ui8_motor_rotor_angle = ui8_motor_rotor_absolute_angle + ui8_interpolation_angle;
-    ui8_sinewave_table_index = ui8_motor_rotor_angle + ui8_foc_angle;
+    ui8_svm_table_index = ui8_motor_rotor_angle + ui8_foc_angle;
   }
   else
 #endif
   {
-    ui8_sinewave_table_index = ui8_motor_rotor_absolute_angle + ui8_foc_angle;
+    ui8_svm_table_index = ui8_motor_rotor_absolute_angle + ui8_foc_angle;
   }
 
   // we need to put phase voltage 90 degrees ahead of rotor position, to get current 90 degrees ahead and have max torque per amp
-  ui8_sinewave_table_index -= 63;
+  ui8_svm_table_index -= 63;
   /****************************************************************************/
 
   /****************************************************************************/
@@ -683,7 +683,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
 
   // scale and apply PWM duty_cycle for the 3 phases
   // phase A is advanced 240 degrees over phase B
-  ui8_temp = ui8_svm_table [(uint8_t) (ui8_sinewave_table_index + 171 /* 240º */)];
+  ui8_temp = ui8_svm_table [(uint8_t) (ui8_svm_table_index + 171 /* 240º */)];
   if (ui8_temp > MIDDLE_PWM_DUTY_CYCLE_MAX)
   {
     ui16_value = ((uint16_t) (ui8_temp - MIDDLE_PWM_DUTY_CYCLE_MAX)) * ui8_duty_cycle;
@@ -698,7 +698,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   }
 
   // phase B as reference phase
-  ui8_temp = ui8_svm_table [ui8_sinewave_table_index];
+  ui8_temp = ui8_svm_table [ui8_svm_table_index];
   if (ui8_temp > MIDDLE_PWM_DUTY_CYCLE_MAX)
   {
     ui16_value = ((uint16_t) (ui8_temp - MIDDLE_PWM_DUTY_CYCLE_MAX)) * ui8_duty_cycle;
@@ -713,7 +713,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
   }
 
   // phase C is advanced 120 degrees over phase B
-  ui8_temp = ui8_svm_table [(uint8_t) (ui8_sinewave_table_index + 85 /* 120º */)];
+  ui8_temp = ui8_svm_table [(uint8_t) (ui8_svm_table_index + 85 /* 120º */)];
   if (ui8_temp > MIDDLE_PWM_DUTY_CYCLE_MAX)
   {
     ui16_value = ((uint16_t) (ui8_temp - MIDDLE_PWM_DUTY_CYCLE_MAX)) * ui8_duty_cycle;

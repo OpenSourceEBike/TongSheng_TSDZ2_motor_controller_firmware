@@ -34,9 +34,11 @@ typedef struct _configuration_variables
   uint8_t ui8_target_battery_max_power_div10;
   uint8_t ui8_cruise_control;
   uint8_t configuration_variables;
-  uint8_t ui8_startup_motor_power_boost_div10;
+  uint8_t ui8_startup_motor_power_boost_factor_x10;
   uint8_t ui8_startup_motor_power_boost_state;
+  uint8_t ui8_startup_motor_power_boost_limit_to_max_power;
   uint8_t ui8_startup_motor_power_boost_time;
+  uint8_t ui8_startup_motor_power_boost_fade_time;
 } struct_configuration_variables;
 
 extern volatile uint8_t ui8_adc_torque_sensor_min_value;

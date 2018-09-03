@@ -29,8 +29,11 @@
 #define STATE_PEDALLING                   2
 
 #define BOOST_STATE_BOOST_DISABLED        0
-#define BOOST_STATE_BOOST                 1
-#define BOOST_STATE_BOOST_WAIT_TO_RESTART 2
+#define BOOST_STATE_START_BOOST           1
+#define BOOST_STATE_BOOST                 2
+#define BOOST_STATE_END_BOOST             3
+#define BOOST_STATE_FADE                  4
+#define BOOST_STATE_BOOST_WAIT_TO_RESTART 5
 
 uint8_t ui8_adc_battery_max_current = ADC_BATTERY_CURRENT_MAX;
 uint8_t ui8_target_battery_max_power_x10 = ADC_BATTERY_CURRENT_MAX;
@@ -51,9 +54,16 @@ volatile uint8_t ui8_pas_direction = 0;
 uint8_t ui8_pas_cadence_rpm = 0;
 uint8_t ui8_pedal_human_power = 0;
 uint8_t ui8_startup_boost_enable = 0;
+uint8_t ui8_startup_boost_fade_enable = 0;
 uint8_t ui8_startup_boost_state_machine = 0;
 uint8_t ui8_startup_boost_no_torque = 0;
 uint8_t ui8_startup_boost_timer = 0;
+uint8_t ui8_startup_boost_fade_steps = 0;
+uint16_t ui16_startup_boost_fade_variable_x256;
+uint16_t ui16_startup_boost_fade_variable_step_amount_x256;
+uint8_t ui8_adc_battery_target_current;
+
+uint8_t ui8_adc_max_battery_current_calculated_from_power;
 
 // wheel speed
 volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks = (uint16_t) WHEEL_SPEED_SENSOR_MAX_PWM_CYCLE_TICKS;
@@ -187,38 +197,53 @@ void startup_boost (void)
     {
       // ebike is stopped, wait for throttle signal to startup boost
       case BOOST_STATE_BOOST_DISABLED:
-        if (configuration_variables.ui8_startup_motor_power_boost_state == 0)
+        if ((ui8_torque_sensor > 0) &&
+            (!brake_is_set()))
         {
-          if ((ui8_torque_sensor_raw > 0) &&
-              (!brake_is_set()))
-          {
-            ui8_startup_boost_enable = 1;
-            ui8_startup_boost_timer = configuration_variables.ui8_startup_motor_power_boost_time;
-            ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
-          }
-        }
-        else if (configuration_variables.ui8_startup_motor_power_boost_state == 1)
-        {
-          if ((ui8_torque_sensor_raw > 0) &&
-              (ui8_pas_cadence_rpm > 0) &&
-              (!brake_is_set()))
-          {
-            ui8_startup_boost_enable = 1;
-            ui8_startup_boost_timer = configuration_variables.ui8_startup_motor_power_boost_time;
-            ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
-          }
+          ui8_startup_boost_state_machine = BOOST_STATE_START_BOOST;
         }
       break;
 
-      // wait for end of boost
+      case BOOST_STATE_START_BOOST:
+        ui8_startup_boost_enable = 1;
+        ui8_startup_boost_timer = configuration_variables.ui8_startup_motor_power_boost_time;
+        ui8_startup_boost_state_machine = BOOST_STATE_BOOST;
+      break;
+
       case BOOST_STATE_BOOST:
         // decrement timer
         if (ui8_startup_boost_timer > 0) { ui8_startup_boost_timer--; }
 
-        // startup_boost disable when no torque or when time out
-        if ((ui8_torque_sensor_raw == 0) || (ui8_startup_boost_timer == 0))
+        // disable boost if
+        if ((ui8_torque_sensor == 0) ||
+            (ui8_startup_boost_timer == 0))
         {
-          ui8_startup_boost_enable = 0;
+          ui8_startup_boost_state_machine = BOOST_STATE_END_BOOST;
+        }
+      break;
+
+      case BOOST_STATE_END_BOOST:
+        ui8_startup_boost_enable = 0;
+
+        // setup variables for fade
+        ui8_startup_boost_fade_steps = configuration_variables.ui8_startup_motor_power_boost_fade_time;
+        ui16_startup_boost_fade_variable_x256 = ((uint16_t) ui8_adc_battery_target_current << 8);
+        ui16_startup_boost_fade_variable_step_amount_x256 = (ui16_startup_boost_fade_variable_x256 / ((uint16_t) ui8_startup_boost_fade_steps));
+        ui8_startup_boost_fade_enable = 1;
+
+        ui8_startup_boost_state_machine = BOOST_STATE_FADE;
+      break;
+
+      case BOOST_STATE_FADE:
+        if (ui8_startup_boost_fade_steps > 0) { ui8_startup_boost_fade_steps--; }
+
+        // disable fade if
+        if ((ui8_torque_sensor_raw == 0) ||
+            (ui8_pas_cadence_rpm == 0) ||
+            (ui8_startup_boost_fade_steps == 0))
+        {
+          ui8_startup_boost_fade_enable = 0;
+          ui8_startup_boost_fade_steps = 0;
           ui8_startup_boost_state_machine = BOOST_STATE_BOOST_WAIT_TO_RESTART;
         }
       break;
@@ -226,7 +251,7 @@ void startup_boost (void)
       // restart when user is not pressing the pedals AND/OR wheel speed = 0
       case BOOST_STATE_BOOST_WAIT_TO_RESTART:
         // wheel speed must be 0 as also torque sensor
-        if (configuration_variables.ui8_startup_motor_power_boost_state == 0)
+        if ((configuration_variables.ui8_startup_motor_power_boost_state & 1) == 0)
         {
           if ((ui16_wheel_speed_x10 == 0) && (ui8_torque_sensor_raw == 0))
           {
@@ -234,7 +259,7 @@ void startup_boost (void)
           }
         }
         // torque sensor must be 0
-        else if (configuration_variables.ui8_startup_motor_power_boost_state == 1)
+        if ((configuration_variables.ui8_startup_motor_power_boost_state & 1) > 0)
         {
           if ((ui8_torque_sensor_raw == 0) || (ui8_pas_cadence_rpm == 0))
           {
@@ -323,14 +348,20 @@ void communications_controller (void)
           configuration_variables.ui8_cruise_control = ui8_rx_buffer [6] & 1;
           configuration_variables.ui8_motor_voltage_type = (ui8_rx_buffer [6] & 2) >> 1;
           configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation = (ui8_rx_buffer [6] & 4) >> 2;
-          configuration_variables.ui8_startup_motor_power_boost_state = ui8_rx_buffer [7];
+          configuration_variables.ui8_startup_motor_power_boost_state = ui8_rx_buffer [7] & 1;
+          configuration_variables.ui8_startup_motor_power_boost_limit_to_max_power = (ui8_rx_buffer [7] & 2) >> 1;
         break;
 
         case 4:
           // startup motor power boost
-          configuration_variables.ui8_startup_motor_power_boost_div10 = ui8_rx_buffer [6];
+          configuration_variables.ui8_startup_motor_power_boost_factor_x10 = ui8_rx_buffer [6];
           // startup motor power boost time
           configuration_variables.ui8_startup_motor_power_boost_time = ui8_rx_buffer [7];
+        break;
+
+        case 5:
+          // startup motor power boost fade time
+          configuration_variables.ui8_startup_motor_power_boost_fade_time = ui8_rx_buffer [6];
         break;
       }
 
@@ -432,14 +463,10 @@ static void ebike_control_motor (void)
   uint8_t ui8_throttle_value;
   uint8_t _ui8_pas_cadence_rpm;
   uint16_t ui16_battery_voltage_filtered;
-  uint8_t ui8_adc_max_battery_current_calculated_from_power;
-  uint8_t ui8_adc_battery_target_current;
   uint8_t ui8_startup_enable;
-  uint8_t ui8_human_power_factor_at_startup;
-  uint8_t ui8_adc_battery_max_current_user_defined;
-
-  // manage motor startup boost
-  startup_boost ();
+  uint8_t ui8_level;
+  uint16_t ui16_adc_battery_target_current;
+  uint8_t ui8_boost_enable;
 
   // start with disabled
   ui8_startup_enable = 0;
@@ -456,24 +483,51 @@ static void ebike_control_motor (void)
     if (ui8_pas_cadence_rpm < 10) { _ui8_pas_cadence_rpm = 0; }
   }
 
-  // cadence percentage (in x256)
-  ui16_temp = (((uint16_t) _ui8_pas_cadence_rpm) << 8) / ((uint16_t) configuration_variables.ui8_pas_max_cadence);
-  // limit the calculated value to be no more than PAS max cadence RPM x256
-  if (ui16_temp > 255) { ui16_temp = 255; }
+  if (ui8_startup_boost_enable &&
+      configuration_variables.ui8_assist_level_factor_x10 &&
+      (_ui8_pas_cadence_rpm > 0))
+  {
+    ui8_boost_enable = 1;
+  }
+  else
+  {
+    ui8_boost_enable = 0;
+  }
 
-  // human power: pedal torque * pedal cadence
-  // calc human power
-  ui8_pedal_human_power = ((((uint16_t) ui8_torque_sensor) * ui16_temp) >> 8);
+  if (ui8_boost_enable)
+  {
+    ui16_temp = (((uint16_t) ui8_torque_sensor) * ((uint16_t) configuration_variables.ui8_startup_motor_power_boost_factor_x10));
+    ui16_temp /= 10;
 
-  // now scale human power with assist level
-  ui16_temp = ((uint16_t) ui8_pedal_human_power) * ((uint16_t) configuration_variables.ui8_assist_level_factor_x10);
-  ui16_temp /= 10;
-  // limit to max possible value 255
-  if (ui16_temp > 255) { ui16_temp = 255; }
-  ui8_pedal_human_power = (uint8_t) ui16_temp;
+    // limit to max possible value 255
+    if (ui16_temp > 255) { ui16_temp = 255; }
+    ui8_level = (uint8_t) ui16_temp;
+    ui8_pedal_human_power = 0; // consider that there is no human pedal while on boost mode
+  }
+  else
+  {
+    // cadence percentage (in x256)
+    ui16_temp = (((uint16_t) _ui8_pas_cadence_rpm) << 8) / ((uint16_t) configuration_variables.ui8_pas_max_cadence);
+    // limit the calculated value to be no more than PAS max cadence RPM x256
+    if (ui16_temp > 255) { ui16_temp = 255; }
 
-  // use the value that is the max of both signals: throttle or torque sensor (human power)
-  ui8_throttle_value = ui8_max (ui8_throttle, ui8_pedal_human_power);
+    // human power: pedal torque * pedal cadence
+    // calc human power
+    ui8_pedal_human_power = ((((uint16_t) ui8_torque_sensor) * ui16_temp) >> 8);
+
+    // now scale human power with assist level
+    ui16_temp = ((uint16_t) ui8_pedal_human_power) * ((uint16_t) configuration_variables.ui8_assist_level_factor_x10);
+    ui16_temp /= 10;
+
+    // limit to max possible value 255
+    // limit to max possible value 255
+    if (ui16_temp > 255) { ui16_temp = 255; }
+    ui8_level = (uint8_t) ui16_temp;
+    ui8_pedal_human_power = ui8_level;
+  }
+
+  // use the value that is the max of both signals
+  ui8_throttle_value = ui8_max (ui8_throttle, ui8_level);
 
   // map previous value to battery current
   ui8_adc_battery_target_current = (uint8_t) (map ((uint32_t) ui8_throttle_value,
@@ -506,22 +560,34 @@ static void ebike_control_motor (void)
          (uint32_t) ui8_adc_battery_target_current,
          (uint32_t) 0));
 
-  if (ui8_startup_boost_enable)
-  {
-    // 1.6 = 1 / 0.625(each adc step for current)
-    // 1.6 * 10 = 16
-    ui8_adc_battery_target_current = ((uint16_t) configuration_variables.ui8_startup_motor_power_boost_div10 * 16) / ui16_battery_voltage_filtered;
 
-    // at boost, we limit to ui8_battery_max_current
-    // now let's limit the target battery current to ADC_BATTERY_CURRENT_MAX (use min value of both)
-    ui8_adc_battery_max_current_user_defined = (uint8_t) ((uint16_t) ((uint16_t) configuration_variables.ui8_battery_max_current * 16) / 10);
-    ui8_adc_battery_target_current = ui8_min (ui8_adc_battery_target_current, ui8_adc_battery_max_current_user_defined);
-  }
-  else
+  if ((configuration_variables.ui8_startup_motor_power_boost_limit_to_max_power == 1) ||
+      (ui8_boost_enable == 0))
   {
     // now let's limit the target battery current to battery max current (use min value of both)
     ui8_adc_battery_target_current = ui8_min (ui8_adc_battery_target_current, ui8_adc_max_battery_current_calculated_from_power);
   }
+
+  // startup boost state machine
+  startup_boost ();
+  // ***********************************************************************************
+  // make transition from boost to regular level
+  if (ui8_startup_boost_fade_enable)
+  {
+    // here we try to converge to the regular value
+    ui16_adc_battery_target_current = ((uint16_t) ui8_adc_battery_target_current) << 8;
+    if (ui16_startup_boost_fade_variable_x256 > ui16_adc_battery_target_current)
+    {
+      ui16_startup_boost_fade_variable_x256 -= ui16_startup_boost_fade_variable_step_amount_x256;
+    }
+    else if (ui16_startup_boost_fade_variable_x256 < ui16_adc_battery_target_current)
+    {
+      ui16_startup_boost_fade_variable_x256 += ui16_startup_boost_fade_variable_step_amount_x256;
+    }
+
+    ui8_adc_battery_target_current = (uint8_t) (ui16_startup_boost_fade_variable_x256 >> 8);
+  }
+  // ***********************************************************************************
 
   // finally set the target battery current to the current controller
   ebike_app_set_target_adc_battery_max_current (ui8_adc_battery_target_current);
@@ -529,7 +595,9 @@ static void ebike_control_motor (void)
   // set the target duty_cycle to max, as the battery current controller will manage it
   // if battery_target_current == 0, put duty_cycle at 0
   // if ui8_startup_enable == 0, put duty_cycle at 0
-  if (ui8_adc_battery_target_current && ui8_startup_enable)
+  if (ui8_adc_battery_target_current &&
+      ui8_startup_enable &&
+      (!brake_is_set()))
   {
     motor_set_pwm_duty_cycle_target (255);
   }

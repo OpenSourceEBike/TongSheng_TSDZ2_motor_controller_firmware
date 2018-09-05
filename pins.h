@@ -28,7 +28,7 @@
  *
  * PIN                | IN/OUT|Function
  * ----------------------------------------------------------
- * PD0                | in  | battery_over_current
+ * PD0                | in  | battery_over_current (PD0 on original firmware configured as: Port D0 alternate function = TIM1_BKIN)
  * PB4  (ADC_AIN4)    | in  | torque sensor signal, this signal is amplified by the opamp
  * PB5  (ADC_AIN5)    | in  | battery_current (14 ADC bits step per 1 amp; this signal amplified by the opamp 358)
  * PB6  (ADC_AIN6)    | in  | battery_voltage (0.344V per ADC 8bits step: 17.9V --> ADC_10bits = 52; 40V --> ADC_10bits = 116; this signal atenuated by the opamp 358)
@@ -54,13 +54,19 @@
  * PA1                | in  | wheel speed
  *
  * PD3                | out | torque sensor excitation
- * PB3  (ADC_AIN3)    | in  | ???? torque sensor ???
- * PD4                | out | enable/disable 5V output of the circuit, meaning it can turn off all the system including the microcontroller itself
+ * PB3  (ADC_AIN3)    | in  | ???? realted to torque sensor ???
+ * PD4                | out | lights. Enable/disable 5V output of the circuit that powers the lights wire of 6V.
  *
  * PE6  (ADC_AIN9)    | in  | this signal goes to a pad of a resistor that is not assembled. If was assembled, it would measure the opamp output value related to AIN4.
  *
- * PE1  ??
- * PD1  ??
+ * PE1  tested as input on original firmware | External interrupt enabled
+ * PE2  tested as input on original firmware
+ * PD1  tested as input on original firmware | External interrupt enabled
+ *
+ * PA2  tested as input on original firmware
+ * PA4  configured as output on original firmware, original firmware seems to only put it at 1 / enable
+ * PA5  tested as input on original firmware
+ * PA6  configured as output on original firmware, original firmware seems to only put it at 1 / enable
  *
  */
 
@@ -106,8 +112,8 @@
 #define TORQUE_SENSOR__PORT       GPIOB
 #define TORQUE_SENSOR__PIN        GPIO_PIN_3
 
-#define LIGHTS__PORT              GPIOE
-#define LIGHTS__PIN               GPIO_PIN_2
+#define LIGHTS__PORT              GPIOD
+#define LIGHTS__PIN               GPIO_PIN_4
 
 #define THROTTLE__PORT            GPIOB
 #define THROTTLE__PIN             GPIO_PIN_7

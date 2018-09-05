@@ -23,6 +23,7 @@
 #include "eeprom.h"
 #include "config.h"
 #include "utils.h"
+#include "lights.h"
 
 #define STATE_NO_PEDALLING                0
 #define STATE_STARTUP_PEDALLING           1
@@ -311,7 +312,8 @@ void communications_controller (void)
       // assist level
       configuration_variables.ui8_assist_level_factor_x10 = ui8_rx_buffer [1];
       // head light
-      configuration_variables.ui8_head_light = (ui8_rx_buffer [2] & (1 << 0)) ? 1: 0;
+      configuration_variables.ui8_lights = (ui8_rx_buffer [2] & (1 << 0)) ? 1: 0;
+      lights_set_state (configuration_variables.ui8_lights);
       // walk assist
       configuration_variables.ui8_walk_assist = (ui8_rx_buffer [2] & (1 << 1)) ? 1: 0;
       // battery max current
@@ -465,7 +467,7 @@ static void ebike_control_motor (void)
   uint16_t ui16_battery_voltage_filtered;
   uint8_t ui8_startup_enable;
   uint8_t ui8_level;
-  uint16_t ui16_adc_battery_target_current;
+  uint16_t ui16_adc_battery_target_current_x256;
   uint8_t ui8_boost_enable;
 
   // start with disabled
@@ -482,6 +484,9 @@ static void ebike_control_motor (void)
   {
     if (ui8_pas_cadence_rpm < 10) { _ui8_pas_cadence_rpm = 0; }
   }
+
+  // startup boost state machine
+  startup_boost ();
 
   if (ui8_startup_boost_enable &&
       configuration_variables.ui8_assist_level_factor_x10 &&
@@ -560,27 +565,27 @@ static void ebike_control_motor (void)
          (uint32_t) ui8_adc_battery_target_current,
          (uint32_t) 0));
 
-
+  // limit only the current to max value defined by user on max power, if:
+  // - user defined to make that limitation
+  // - we are not on boost or fade state
   if ((configuration_variables.ui8_startup_motor_power_boost_limit_to_max_power == 1) ||
-      (ui8_boost_enable == 0))
+      (!((ui8_boost_enable == 1) || (ui8_startup_boost_fade_enable == 1))))
   {
     // now let's limit the target battery current to battery max current (use min value of both)
     ui8_adc_battery_target_current = ui8_min (ui8_adc_battery_target_current, ui8_adc_max_battery_current_calculated_from_power);
   }
 
-  // startup boost state machine
-  startup_boost ();
   // ***********************************************************************************
   // make transition from boost to regular level
   if (ui8_startup_boost_fade_enable)
   {
-    // here we try to converge to the regular value
-    ui16_adc_battery_target_current = ((uint16_t) ui8_adc_battery_target_current) << 8;
-    if (ui16_startup_boost_fade_variable_x256 > ui16_adc_battery_target_current)
+    // here we try to converge to the regular value, ramping down or up step by step
+    ui16_adc_battery_target_current_x256 = ((uint16_t) ui8_adc_battery_target_current) << 8;
+    if (ui16_startup_boost_fade_variable_x256 > ui16_adc_battery_target_current_x256)
     {
       ui16_startup_boost_fade_variable_x256 -= ui16_startup_boost_fade_variable_step_amount_x256;
     }
-    else if (ui16_startup_boost_fade_variable_x256 < ui16_adc_battery_target_current)
+    else if (ui16_startup_boost_fade_variable_x256 < ui16_adc_battery_target_current_x256)
     {
       ui16_startup_boost_fade_variable_x256 += ui16_startup_boost_fade_variable_step_amount_x256;
     }

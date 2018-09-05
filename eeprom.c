@@ -78,7 +78,7 @@ static void eeprom_read_values_to_variables (void)
   p_configuration_variables->ui8_assist_level_factor_x10 = FLASH_ReadByte (ADDRESS_ASSIST_LEVEL_FACTOR_X10);
 
   ui8_temp = FLASH_ReadByte (ADDRESS_CONFIG_0);
-  p_configuration_variables->ui8_head_light = ui8_temp & 1;
+  p_configuration_variables->ui8_lights = ui8_temp & 1;
   p_configuration_variables->ui8_walk_assist = (ui8_temp & 2) >> 1;
 
   p_configuration_variables->ui8_battery_max_current = FLASH_ReadByte (ADDRESS_BATTERY_MAX_CURRENT);
@@ -116,7 +116,7 @@ static void variables_to_array (uint8_t *ui8_array)
 
   ui8_array [0] = KEY;
   ui8_array [1] = p_configuration_variables->ui8_assist_level_factor_x10;
-  ui8_array [2] = (p_configuration_variables->ui8_head_light & 1) |
+  ui8_array [2] = (p_configuration_variables->ui8_lights & 1) |
                       ((p_configuration_variables->ui8_walk_assist & 1) << 1);
   ui8_array [3] = p_configuration_variables->ui8_battery_max_current;
   ui8_array [4] = p_configuration_variables->ui8_motor_power_x10;

@@ -25,7 +25,7 @@ typedef struct _configuration_variables
   uint8_t ui8_motor_power_x10;
   uint16_t ui16_battery_low_voltage_cut_off_x10;
   uint16_t ui16_wheel_perimeter;
-  uint8_t ui8_head_light;
+  uint8_t ui8_lights;
   uint8_t ui8_walk_assist;
   uint8_t ui8_wheel_max_speed;
   uint8_t ui8_pas_max_cadence;

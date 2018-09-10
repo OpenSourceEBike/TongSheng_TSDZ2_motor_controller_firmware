@@ -103,4 +103,6 @@
 #define READ_BATTERY_VOLTAGE_FILTER_COEFFICIENT 2
 // *************************************************************************** //
 
+#define READ_MOTOR_TEMPERATURE_FILTER_COEFFICIENT 4
+
 #endif // _MAIN_H_

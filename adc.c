@@ -113,6 +113,17 @@ uint16_t ui16_adc_read_torque_sensor_10b (void)
   return ((uint16_t) temph) << 2 | ((uint16_t) templ);
 }
 
+uint16_t ui16_adc_read_throttle_10b (void)
+{
+  uint16_t temph;
+  uint8_t templ;
+
+  templ = *(uint8_t*)(0x53EF);
+  temph = *(uint8_t*)(0x53EE);
+
+  return ((uint16_t) temph) << 2 | ((uint16_t) templ);
+}
+
 uint16_t ui16_adc_read_battery_voltage_10b (void)
 {
   uint16_t temph;
@@ -123,3 +134,4 @@ uint16_t ui16_adc_read_battery_voltage_10b (void)
 
   return ((uint16_t) temph) << 2 | ((uint16_t) templ);
 }
+

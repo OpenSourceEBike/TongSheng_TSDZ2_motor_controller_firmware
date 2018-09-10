@@ -78,7 +78,7 @@ volatile struct_configuration_variables configuration_variables;
 volatile uint8_t ui8_received_package_flag = 0;
 volatile uint8_t ui8_rx_buffer[10];
 volatile uint8_t ui8_rx_counter = 0;
-volatile uint8_t ui8_tx_buffer[21];
+volatile uint8_t ui8_tx_buffer[22];
 volatile uint8_t ui8_tx_counter = 0;
 volatile uint8_t ui8_i;
 volatile uint8_t ui8_checksum;
@@ -92,6 +92,8 @@ static uint8_t ui8_last_package_id;
 uint8_t ui8_tstr_state_machine = STATE_NO_PEDALLING;
 uint8_t ui8_rtst_counter = 0;
 
+uint16_t ui16_adc_motor_temperatured_accumulated = 0;
+
 // function prototypes
 static void ebike_control_motor (void);
 void ebike_app_set_battery_max_current (uint8_t ui8_value);
@@ -102,6 +104,7 @@ void calc_wheel_speed (void);
 void throttle_read (void);
 void torque_sensor_read (void);
 void startup_boost (void);
+void calc_motor_temperature (void);
 
 void read_pas_cadence (void)
 {
@@ -288,6 +291,7 @@ void ebike_app_controller (void)
   torque_sensor_read ();
   read_pas_cadence ();
   calc_wheel_speed ();
+  calc_motor_temperature ();
   ebike_control_motor ();
   communications_controller ();
 }
@@ -306,7 +310,7 @@ void communications_controller (void)
       crc16 (ui8_rx_buffer[ui8_i], &ui16_crc_rx);
     }
 
-    // see if checksum is ok...
+    // see if CRC is ok...
     if (((((uint16_t) ui8_rx_buffer [9]) << 8) + ((uint16_t) ui8_rx_buffer [8])) == ui16_crc_rx)
     {
       // assist level
@@ -350,6 +354,9 @@ void communications_controller (void)
           configuration_variables.ui8_cruise_control = ui8_rx_buffer [6] & 1;
           configuration_variables.ui8_motor_voltage_type = (ui8_rx_buffer [6] & 2) >> 1;
           configuration_variables.ui8_motor_assistance_startup_without_pedal_rotation = (ui8_rx_buffer [6] & 4) >> 2;
+          configuration_variables.ui8_throttle_adc_measures_motor_temperature = (ui8_rx_buffer [6] & 8) >> 3;
+          configuration_variables.ui8_motor_over_temperature_limit_current = (ui8_rx_buffer [6] & 16) >> 4;
+
           configuration_variables.ui8_startup_motor_power_boost_state = ui8_rx_buffer [7] & 1;
           configuration_variables.ui8_startup_motor_power_boost_limit_to_max_power = (ui8_rx_buffer [7] & 2) >> 1;
         break;
@@ -364,6 +371,12 @@ void communications_controller (void)
         case 5:
           // startup motor power boost fade time
           configuration_variables.ui8_startup_motor_power_boost_fade_time = ui8_rx_buffer [6];
+        break;
+
+        case 6:
+          // motor temperature min and max values to limit
+          configuration_variables.ui8_motor_temperature_min_value_to_limit = ui8_rx_buffer [6];
+          configuration_variables.ui8_motor_temperature_max_value_to_limit = ui8_rx_buffer [7];
         break;
       }
 
@@ -422,10 +435,19 @@ void uart_send_package (void)
   // error states
   ui8_tx_buffer[8] = 0;
 
-  // ADC throttle
-  ui8_tx_buffer[9] = UI8_ADC_THROTTLE;
-  // throttle value with offset removed and mapped to 255
-  ui8_tx_buffer[10] = ui8_throttle;
+  if (configuration_variables.ui8_throttle_adc_measures_motor_temperature)
+  {
+    ui8_tx_buffer[9] = UI8_ADC_THROTTLE;
+    ui8_tx_buffer[10] = configuration_variables.ui8_motor_temperature;
+  }
+  else
+  {
+    // ADC throttle
+    ui8_tx_buffer[9] = UI8_ADC_THROTTLE;
+    // throttle value with offset removed and mapped to 255
+    ui8_tx_buffer[10] = ui8_throttle;
+  }
+
   // ADC torque_sensor
   ui8_tx_buffer[11] = UI8_ADC_TORQUE_SENSOR;
   // torque sensor value with offset removed and mapped to 255
@@ -437,23 +459,25 @@ void uart_send_package (void)
   // PWM duty_cycle
   ui8_tx_buffer[15] = ui8_duty_cycle;
   // motor speed in ERPS
-  ui16_temp = ui16_motor_get_motor_speed_erps(),
+  ui16_temp = ui16_motor_get_motor_speed_erps ();
   ui8_tx_buffer[16] = (uint8_t) (ui16_temp & 0xff);
   ui8_tx_buffer[17] = (uint8_t) (ui16_temp >> 8);
   // FOC angle
   ui8_tx_buffer[18] = ui8_foc_angle;
+  // temperature actual limiting value
+  ui8_tx_buffer[19] = configuration_variables.ui8_temperature_current_limiting_value;
 
   // prepare crc of the package
   ui16_crc_tx = 0xffff;
-  for (ui8_i = 0; ui8_i <= 18; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 19; ui8_i++)
   {
     crc16 (ui8_tx_buffer[ui8_i], &ui16_crc_tx);
   }
-  ui8_tx_buffer[19] = (uint8_t) (ui16_crc_tx & 0xff);
-  ui8_tx_buffer[20] = (uint8_t) (ui16_crc_tx >> 8) & 0xff;
+  ui8_tx_buffer[20] = (uint8_t) (ui16_crc_tx & 0xff);
+  ui8_tx_buffer[21] = (uint8_t) (ui16_crc_tx >> 8) & 0xff;
 
   // send the full package to UART
-  for (ui8_i = 0; ui8_i <= 20; ui8_i++)
+  for (ui8_i = 0; ui8_i <= 21; ui8_i++)
   {
     putchar (ui8_tx_buffer[ui8_i]);
   }
@@ -531,8 +555,15 @@ static void ebike_control_motor (void)
     ui8_pedal_human_power = ui8_level;
   }
 
-  // use the value that is the max of both signals
-  ui8_throttle_value = ui8_max (ui8_throttle, ui8_level);
+  if (configuration_variables.ui8_throttle_adc_measures_motor_temperature)
+  {
+    ui8_throttle_value = ui8_level;
+  }
+  else
+  {
+    // use the value that is the max of both signals
+    ui8_throttle_value = ui8_max (ui8_throttle, ui8_level);
+  }
 
   // map previous value to battery current
   ui8_adc_battery_target_current = (uint8_t) (map ((uint32_t) ui8_throttle_value,
@@ -591,6 +622,40 @@ static void ebike_control_motor (void)
     }
 
     ui8_adc_battery_target_current = (uint8_t) (ui16_startup_boost_fade_variable_x256 >> 8);
+  }
+  // ***********************************************************************************
+
+  // ***********************************************************************************
+  if (configuration_variables.ui8_throttle_adc_measures_motor_temperature &&
+      configuration_variables.ui8_motor_over_temperature_limit_current)
+  {
+    // min temperature value can't be equal or higher than max temperature value...
+    if (configuration_variables.ui8_motor_temperature_min_value_to_limit >= configuration_variables.ui8_motor_temperature_max_value_to_limit)
+    {
+      ui8_adc_battery_target_current = 0;
+      configuration_variables.ui8_temperature_current_limiting_value = 0;
+    }
+    else
+    {
+      // reduce motor current if over temperature
+      ui8_adc_battery_target_current = (uint8_t) (map ((uint32_t) configuration_variables.ui16_motor_temperature_x2,
+             (uint32_t) (((uint16_t) configuration_variables.ui8_motor_temperature_min_value_to_limit) << 1),
+             (uint32_t) (((uint16_t) configuration_variables.ui8_motor_temperature_max_value_to_limit) << 1),
+             (uint32_t) ui8_adc_battery_target_current,
+             (uint32_t) 0));
+
+      // get a value linear to the current limitation, just to show to user
+      configuration_variables.ui8_temperature_current_limiting_value = (uint8_t) (map ((uint32_t) configuration_variables.ui16_motor_temperature_x2,
+             (uint32_t) (((uint16_t) configuration_variables.ui8_motor_temperature_min_value_to_limit) << 1),
+             (uint32_t) (((uint16_t) configuration_variables.ui8_motor_temperature_max_value_to_limit) << 1),
+             (uint32_t) 255,
+             (uint32_t) 0));
+    }
+  }
+  else
+  {
+    // keep ui8_temperature_current_limiting_value = 255 because 255 means no current limiting happening
+    configuration_variables.ui8_temperature_current_limiting_value = 255;
   }
   // ***********************************************************************************
 
@@ -698,4 +763,17 @@ void calc_wheel_speed (void)
 struct_configuration_variables* get_configuration_variables (void)
 {
   return &configuration_variables;
+}
+
+void calc_motor_temperature (void)
+{
+  uint16_t ui16_adc_motor_temperatured_filtered_10b;
+
+  // low pass filter to avoid possible fast spikes/noise
+  ui16_adc_motor_temperatured_accumulated -= ui16_adc_motor_temperatured_accumulated >> READ_MOTOR_TEMPERATURE_FILTER_COEFFICIENT;
+  ui16_adc_motor_temperatured_accumulated += ui16_adc_read_throttle_10b ();
+  ui16_adc_motor_temperatured_filtered_10b = ui16_adc_motor_temperatured_accumulated >> READ_MOTOR_TEMPERATURE_FILTER_COEFFICIENT;
+
+  configuration_variables.ui16_motor_temperature_x2 = (uint16_t) ((float) ui16_adc_motor_temperatured_filtered_10b / 1.024);
+  configuration_variables.ui8_motor_temperature = (uint8_t) (configuration_variables.ui16_motor_temperature_x2 >> 1);
 }

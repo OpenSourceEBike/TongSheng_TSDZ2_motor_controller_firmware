@@ -94,7 +94,6 @@
 // 1A per 5 steps of ADC_10bits
 #define ADC_BATTERY_CURRENT_PER_ADC_STEP_X512 102
 
-
 #define ADC_BATTERY_VOLTAGE_MIN   (uint8_t) ((float) (BATTERY_LI_ION_CELLS_NUMBER * LI_ION_CELL_VOLTS_0) / ADC8BITS_BATTERY_VOLTAGE_PER_ADC_STEP)
 
 // Possible values: 0, 1, 2, 3, 4, 5, 6

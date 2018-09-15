@@ -24,3 +24,4 @@ StdPeriphLib/src/*.rst
 StdPeriphLib/src/*.sym
 Debug
 
+Result.log

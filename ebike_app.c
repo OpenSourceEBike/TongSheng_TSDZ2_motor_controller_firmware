@@ -315,10 +315,12 @@ void communications_controller (void)
       // assist level
       configuration_variables.ui8_power_regular_state_div25 = ui8_rx_buffer [1];
       // head light
-      configuration_variables.ui8_lights = (ui8_rx_buffer [2] & (1 << 0)) ? 1: 0;
+      configuration_variables.ui8_lights = ui8_rx_buffer [2] & 1 ? 1: 0;
       lights_set_state (configuration_variables.ui8_lights);
       // walk assist
-      configuration_variables.ui8_walk_assist = (ui8_rx_buffer [2] & (1 << 1)) ? 1: 0;
+      configuration_variables.ui8_walk_assist = (ui8_rx_buffer [2]) & (1 << 1) ? 1: 0;
+      // offroad mode
+      configuration_variables.ui8_offroad_mode = (ui8_rx_buffer [2]) & (1 << 2) ? 1: 0;
       // battery max current
       configuration_variables.ui8_battery_max_current = ui8_rx_buffer [3];
       ebike_app_set_battery_max_current (configuration_variables.ui8_battery_max_current);
@@ -376,6 +378,19 @@ void communications_controller (void)
           // motor temperature min and max values to limit
           configuration_variables.ui8_motor_temperature_min_value_to_limit = ui8_rx_buffer [6];
           configuration_variables.ui8_motor_temperature_max_value_to_limit = ui8_rx_buffer [7];
+        break;
+
+        case 7:
+          // offroad mode configuration
+          configuration_variables.ui8_offroad_func_enabled = ui8_rx_buffer [6] & 1;
+          configuration_variables.ui8_offroad_enabled_on_startup = (ui8_rx_buffer [6]) & (1 << 1);
+          configuration_variables.ui8_offroad_speed_limit = ui8_rx_buffer [7];
+        break;
+
+        case 8:
+          // offroad mode power limit configuration
+          configuration_variables.ui8_offroad_power_limit_enabled = ui8_rx_buffer [6] & 1;
+          configuration_variables.ui8_offroad_power_limit_div25 = ui8_rx_buffer [7];
         break;
       }
 
@@ -496,6 +511,8 @@ static void ebike_control_motor (void)
   uint16_t ui16_adc_battery_target_current_x256;
   uint8_t ui8_boost_enable;
   uint32_t ui32_temp;
+  uint8_t ui8_tmp_max_speed;
+  uint8_t ui8_offroad_mode_max_current;
 
   // calc battery voltage
   ui16_battery_voltage_filtered = (uint16_t) motor_get_adc_battery_voltage_filtered_10b () * ADC10BITS_BATTERY_VOLTAGE_PER_ADC_STEP_X512;
@@ -621,12 +638,29 @@ static void ebike_control_motor (void)
   ui8_adc_battery_target_current = ui8_max (ui8_adc_battery_target_current, ui8_temp);
   // ***********************************************************************************
 
+  ui8_tmp_max_speed = configuration_variables.ui8_wheel_max_speed;
+
+  // ***********************************************************************************
+  // offroad mode (limit speed if offroad mode is not active)
+  //  
+  if (configuration_variables.ui8_offroad_func_enabled && !configuration_variables.ui8_offroad_mode) 
+  {
+    ui8_tmp_max_speed = configuration_variables.ui8_offroad_speed_limit;
+
+    if (configuration_variables.ui8_offroad_power_limit_enabled && configuration_variables.ui8_offroad_power_limit_div25 > 0)
+    {
+      ui8_offroad_mode_max_current = (uint8_t) (((((uint32_t) configuration_variables.ui8_offroad_power_limit_div25) * 160) / ((uint32_t) ui16_battery_voltage_filtered)) >> 2);
+      ui8_adc_battery_target_current = ui8_min (ui8_offroad_mode_max_current, ui8_adc_battery_target_current);
+    }
+  }
+  // ***********************************************************************************
+
   // ***********************************************************************************
   // speed limit
   //
   ui8_adc_battery_target_current = (uint8_t) (map ((uint32_t) ui16_wheel_speed_x10,
-         (uint32_t) ((configuration_variables.ui8_wheel_max_speed * 10) - 20),
-         (uint32_t) ((configuration_variables.ui8_wheel_max_speed * 10) + 20),
+         (uint32_t) ((ui8_tmp_max_speed * 10) - 20),
+         (uint32_t) ((ui8_tmp_max_speed * 10) + 20),
          (uint32_t) ui8_adc_battery_target_current,
          (uint32_t) 0));
   // ***********************************************************************************

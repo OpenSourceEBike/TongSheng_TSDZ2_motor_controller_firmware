@@ -27,6 +27,7 @@ typedef struct _configuration_variables
   uint16_t ui16_wheel_perimeter;
   uint8_t ui8_lights;
   uint8_t ui8_walk_assist;
+  uint8_t ui8_offroad_mode;
   uint8_t ui8_wheel_max_speed;
   uint8_t ui8_pas_max_cadence;
   uint8_t ui8_motor_voltage_type;
@@ -46,6 +47,11 @@ typedef struct _configuration_variables
   uint8_t ui8_temperature_current_limiting_value;
   uint16_t ui16_motor_temperature_x2;
   uint8_t ui8_motor_temperature;
+  uint8_t ui8_offroad_func_enabled;
+  uint8_t ui8_offroad_enabled_on_startup;
+  uint8_t ui8_offroad_speed_limit;
+  uint8_t ui8_offroad_power_limit_enabled;
+  uint8_t ui8_offroad_power_limit_div25;
 } struct_configuration_variables;
 
 extern volatile uint8_t ui8_adc_torque_sensor_min_value;

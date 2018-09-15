@@ -79,6 +79,9 @@
 #define DEFAULT_VALUE_WHEEL_MAX_SPEED                   50 // 50km/h
 #define DEFAULT_VALUE_PAS_MAX_CADENCE                   110 // 110 RPM
 #define DEFAULT_VALUE_CONFIG_1                          0
+#define DEFAULT_VALUE_OFFROAD_CONFIG                    0
+#define DEFAULT_VALUE_OFFROAD_SPEED_LIMIT               25 // 25km/h
+#define DEFAULT_VALUE_OFFROAD_POWER_LIMIT_DIV25         10 // 10 * 25 = 250W
 // *************************************************************************** //
 
 // *************************************************************************** //

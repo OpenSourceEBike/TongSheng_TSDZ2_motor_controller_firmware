@@ -66,7 +66,7 @@ extern uint8_t ui8_pas_cadence_rpm;
 extern volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks;
 extern volatile uint8_t ui8_wheel_speed_sensor_is_disconnected;
 
-extern volatile uint32_t ui32_wheel_speed_sensor_tick_counter = 0;
+extern volatile uint32_t ui32_wheel_speed_sensor_tick_counter;
 
 void ebike_app_init (void);
 void ebike_app_controller (void);

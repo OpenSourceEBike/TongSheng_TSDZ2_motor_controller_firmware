@@ -85,8 +85,8 @@ volatile uint8_t ui8_state_machine = 0;
 volatile uint8_t ui8_uart_received_first_package = 0;
 static uint16_t ui16_crc_rx;
 static uint16_t ui16_crc_tx;
-static uint8_t ui8_master_comm_package_id;
-static uint8_t ui8_slave_comm_package_id;
+static uint8_t ui8_master_comm_package_id = 0;
+static uint8_t ui8_slave_comm_package_id = 0;
 
 uint8_t ui8_tstr_state_machine = STATE_NO_PEDALLING;
 uint8_t ui8_rtst_counter = 0;
@@ -314,30 +314,30 @@ void communications_controller (void)
     // see if CRC is ok...
     if (((((uint16_t) ui8_rx_buffer [10]) << 8) + ((uint16_t) ui8_rx_buffer [9])) == ui16_crc_rx)
     {
+      ui8_master_comm_package_id = ui8_rx_buffer [1];
+
       // send a variable for each package sent but first verify if the last one was received otherwise, keep repeating
       // keep cycling so all variables are sent
 #define VARIABLE_ID_MAX_NUMBER 5
-      if (ui8_rx_buffer [1]) == ui8_master_comm_package_id) // last package data ID was receipt, so send the next one
+      if ((ui8_rx_buffer [2]) == ui8_slave_comm_package_id) // last package data ID was receipt, so send the next one
       {
-        ui8_master_comm_package_id = (ui8_master_comm_package_id + 1) % VARIABLE_ID_MAX_NUMBER;
+        ui8_slave_comm_package_id = (ui8_slave_comm_package_id + 1) % VARIABLE_ID_MAX_NUMBER;
       }
-
-      ui8_slave_comm_package_id = ui8_rx_buffer [2];
 
       // assist level
       configuration_variables.ui8_power_regular_state_div25 = ui8_rx_buffer [3];
       // head light
-      configuration_variables.ui8_lights = (ui8_rx_buffer [2] & (1 << 0)) ? 1: 0;
+      configuration_variables.ui8_lights = (ui8_rx_buffer [4] & (1 << 0)) ? 1: 0;
       lights_set_state (configuration_variables.ui8_lights);
       // walk assist
-      configuration_variables.ui8_walk_assist = (ui8_rx_buffer [2] & (1 << 1)) ? 1: 0;
+      configuration_variables.ui8_walk_assist = (ui8_rx_buffer [4] & (1 << 1)) ? 1: 0;
       // battery max current
       configuration_variables.ui8_battery_max_current = ui8_rx_buffer [5];
       ebike_app_set_battery_max_current (configuration_variables.ui8_battery_max_current);
       // target battery max power
       configuration_variables.ui8_target_battery_max_power_div25 = ui8_rx_buffer [6];
 
-      switch (ui8_slave_comm_package_id)
+      switch (ui8_master_comm_package_id)
       {
         case 0:
           // battery low voltage cut-off
@@ -390,15 +390,19 @@ void communications_controller (void)
 
         case 7:
           // offroad mode configuration
-          configuration_variables.ui8_offroad_func_enabled = ui8_rx_buffer [6] & 1;
-          configuration_variables.ui8_offroad_enabled_on_startup = (ui8_rx_buffer [6]) & (1 << 1);
-          configuration_variables.ui8_offroad_speed_limit = ui8_rx_buffer [7];
+          configuration_variables.ui8_offroad_func_enabled = ui8_rx_buffer [7] & 1;
+          configuration_variables.ui8_offroad_enabled_on_startup = (ui8_rx_buffer [7]) & (1 << 1);
+          configuration_variables.ui8_offroad_speed_limit = ui8_rx_buffer [8];
         break;
 
         case 8:
           // offroad mode power limit configuration
-          configuration_variables.ui8_offroad_power_limit_enabled = ui8_rx_buffer [6] & 1;
-          configuration_variables.ui8_offroad_power_limit_div25 = ui8_rx_buffer [7];
+          configuration_variables.ui8_offroad_power_limit_enabled = ui8_rx_buffer [7] & 1;
+          configuration_variables.ui8_offroad_power_limit_div25 = ui8_rx_buffer [8];
+        break;
+
+        default:
+          // nothing
         break;
       }
 
@@ -481,7 +485,7 @@ void uart_send_package (void)
   // FOC angle
   ui8_tx_buffer[18] = ui8_foc_angle;
 
-  switch (ui8_master_comm_package_id)
+  switch (ui8_slave_comm_package_id)
   {
     case 0:
       // error states
@@ -506,6 +510,11 @@ void uart_send_package (void)
     case 4:
       // wheel_speed_sensor_tick_counter
       ui8_tx_buffer[19] = (uint8_t) ((ui32_wheel_speed_sensor_tick_counter >> 16) & 0xff);
+    break;
+
+    default:
+      // keep at 0
+      ui8_tx_buffer[19] = 0;
     break;
   }
 
@@ -534,7 +543,7 @@ static void ebike_control_motor (void)
   uint32_t ui32_adc_max_battery_current_boost_state_x4;
   uint32_t ui32_adc_max_battery_current_regular_state_x4;
   uint32_t ui32_adc_max_battery_current_x4;
-  uint8_t ui8_adc_max_battery_current;
+  uint8_t ui8_adc_max_battery_current = 0;
   uint8_t ui8_startup_enable;
   uint16_t ui16_adc_battery_target_current_x256;
   uint8_t ui8_boost_enable;

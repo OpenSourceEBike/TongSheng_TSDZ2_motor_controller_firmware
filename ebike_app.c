@@ -636,6 +636,9 @@ static void ebike_control_motor (void)
          (uint32_t) 0,
          (uint32_t) ui8_adc_battery_current_max));
   ui8_adc_battery_target_current = ui8_max (ui8_adc_battery_target_current, ui8_temp);
+
+  // flag that motor assistance should happen because we may be running with throttle
+  if (ui8_adc_battery_target_current) { ui8_startup_enable = 1; }
   // ***********************************************************************************
 
   ui8_tmp_max_speed = configuration_variables.ui8_wheel_max_speed;

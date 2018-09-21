@@ -40,7 +40,6 @@ typedef struct _configuration_variables
   uint8_t ui8_startup_motor_power_boost_limit_to_max_power;
   uint8_t ui8_startup_motor_power_boost_time;
   uint8_t ui8_startup_motor_power_boost_fade_time;
-  uint8_t ui8_motor_over_temperature_limit_current;
   uint8_t ui8_throttle_adc_measures_motor_temperature;
   uint8_t ui8_motor_temperature_min_value_to_limit;
   uint8_t ui8_motor_temperature_max_value_to_limit;
@@ -66,6 +65,8 @@ extern uint8_t ui8_pas_cadence_rpm;
 
 extern volatile uint16_t ui16_wheel_speed_sensor_pwm_cycles_ticks;
 extern volatile uint8_t ui8_wheel_speed_sensor_is_disconnected;
+
+extern volatile uint32_t ui32_wheel_speed_sensor_tick_counter;
 
 void ebike_app_init (void);
 void ebike_app_controller (void);

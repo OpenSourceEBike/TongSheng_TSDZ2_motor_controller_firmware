@@ -844,6 +844,7 @@ void TIM1_CAP_COM_IRQHandler(void) __interrupt(TIM1_CAP_COM_IRQHANDLER)
      {
        ui16_wheel_speed_sensor_pwm_cycles_ticks = ui16_wheel_speed_sensor_counter;
        ui16_wheel_speed_sensor_counter = 0;
+       ui32_wheel_speed_sensor_tick_counter++;
      }
    }
 
